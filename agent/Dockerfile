@@ -26,4 +26,4 @@ EXPOSE ${HTTP_PORT}
 HEALTHCHECK --interval=10s --timeout=5s --retries=3 --start-period=10s CMD curl -f "http://localhost:${HTTP_PORT}/health" || exit
 
 # Run the application
-CMD ["python", "main.py"]
+CMD ["python", "agent.py"]
