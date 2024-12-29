@@ -24,7 +24,7 @@ def get_docker_containers():
                 'Id': container.id,
                 'Name': container.name,
                 'Image': container.attrs['Config']['Image'],
-                'Labels': container.labels,
+                'ImageHash': container.attrs['Image'],
                 'Status': container.status,
                 'StartedAt': container.attrs['State']['StartedAt'],
             }
