@@ -19,13 +19,15 @@ def get_docker_containers():
     try:
         client = docker.from_env()
         containers = client.containers.list()
+        images = client.images.list()
+        image_digests = {image.id: image.attrs['RepoDigests'][0] if len(image.attrs['RepoDigests']) > 0 else None for image in images}
         containers_info = [
             {
                 'id': container.id,
                 'name': container.name,
                 'image_name': container.attrs['Config']['Image'].split(':')[0],
                 'image_tag': get_image_tag(container.attrs['Config']['Image']),
-                'image_hash': container.attrs['Image'],
+                'repo_digest': image_digests.get(container.attrs['Image'], None), # repo digest, NOT image id
                 'status': container.status,
                 'started_at': container.attrs['State']['StartedAt'],
             }
