@@ -23,7 +23,8 @@ def get_docker_containers():
             {
                 'id': container.id,
                 'name': container.name,
-                'image': container.attrs['Config']['Image'],
+                'image_name': container.attrs['Config']['Image'].split(':')[0],
+                'image_tag': get_image_tag(container.attrs['Config']['Image']),
                 'image_hash': container.attrs['Image'],
                 'status': container.status,
                 'started_at': container.attrs['State']['StartedAt'],
@@ -33,6 +34,8 @@ def get_docker_containers():
         return jsonify(containers_info)
     except (docker.errors.APIError, docker.errors.DockerException) as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
 @app.route('/health', methods=['GET'])
 def get_health():
     try:
@@ -41,6 +44,11 @@ def get_health():
         return jsonify({'status': 'ok', 'message': 'docker is accessible'})
     except (docker.errors.APIError, docker.errors.DockerException) as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+def get_image_tag(image):
+    parts = image.split(':')
+    return parts[1] if len(parts) > 2 else 'latest'
 
 
 if __name__ == '__main__':
