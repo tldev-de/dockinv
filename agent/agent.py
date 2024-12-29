@@ -50,7 +50,7 @@ def get_health():
 
 def get_image_tag(image):
     parts = image.split(':')
-    return parts[1] if len(parts) > 2 else 'latest'
+    return parts[1] if len(parts) >= 2 else 'latest'
 
 
 if __name__ == '__main__':
