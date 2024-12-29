@@ -21,12 +21,12 @@ def get_docker_containers():
         containers = client.containers.list()
         containers_info = [
             {
-                'Id': container.id,
-                'Name': container.name,
-                'Image': container.attrs['Config']['Image'],
-                'ImageHash': container.attrs['Image'],
-                'Status': container.status,
-                'StartedAt': container.attrs['State']['StartedAt'],
+                'id': container.id,
+                'name': container.name,
+                'image': container.attrs['Config']['Image'],
+                'image_hash': container.attrs['Image'],
+                'status': container.status,
+                'started_at': container.attrs['State']['StartedAt'],
             }
             for container in containers
         ]
