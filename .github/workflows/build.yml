@@ -7,6 +7,11 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+      attestations: write
+      id-token: write
 
     steps:
     - name: Checkout repository
@@ -21,7 +26,14 @@ jobs:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
 
-    - name: Build and push Docker image
+    - name: Log in to the Container registry
+      uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and push Docker image agent
       uses: docker/build-push-action@v4
       with:
         context: agent/
@@ -29,3 +41,16 @@ jobs:
         tags: |
           tldevde/dockinv-agent:latest
           tldevde/dockinv-agent:${{ github.event.release.tag_name }}
+          ghcr.io/${{ github.repository }}/dockinv-agent:latest
+          ghcr.io/${{ github.repository }}/dockinv-agent:${{ github.event.release.tag_name }}
+
+    - name: Build and push Docker image server
+      uses: docker/build-push-action@v4
+      with:
+        context: server/
+        push: true
+        tags: |
+          tldevde/dockinv-server:latest
+          tldevde/dockinv-server:${{ github.event.release.tag_name }}
+          ghcr.io/${{ github.repository }}/dockinv-server:latest
+          ghcr.io/${{ github.repository }}/dockinv-server:${{ github.event.release.tag_name }}

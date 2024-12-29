@@ -1,0 +1,11 @@
+import os
+
+
+class Config:
+    SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI', 'sqlite:////data/database.db')
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    CELERY_BROKER_URL = os.getenv('CELERY_RESULT_BACKEND', 'redis://redis:6379/0')
+    CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://redis:6379/0')
+    TASK_TRIVY_INTERVAL = os.getenv('TASK_TRIVY_INTERVAL', 60)
+    TASK_XEOL_INTERVAL = os.getenv('TASK_XEOL_INTERVAL', 60)
+    TASK_DATA_COLLECTOR_INTERVAL = os.getenv('TASK_DATA_COLLECTOR_INTERVAL', 15)

@@ -1,6 +1,9 @@
 services:
   agent:
     image: tldevde/dockinv-agent:latest
+    build:
+      context: ./agent
+      dockerfile: Dockerfile
     restart: always
     ports:
       - "9999:9999"
@@ -10,22 +13,34 @@ services:
       HTTP_TOKEN: your_secret
   server:
     image: tldevde/dockinv-server:latest
+    build:
+      context: ./server
+      dockerfile: Dockerfile
     restart: always
     ports:
-     - "8000:8000"
+     - "127.0.0.1:8000:8000"
     depends_on:
       - redis
     volumes:
-        - data:/data
+        - ./data:/data
+        - ./server:/app
   worker:
     image: tldevde/dockinv-server:latest
+    build:
+      context: ./server
+      dockerfile: Dockerfile
     command: celery -A dockinv_server.tasks worker -l info -B
     restart: always
+    environment:
+      TASK_TRIVY_INTERVAL: 1
+      TASK_XEOL_INTERVAL: 1
+      TASK_DATA_COLLECTOR_INTERVAL: 1
     depends_on:
       - redis
     volumes:
-        - data:/data
+        - ./data:/data
+        - ./server:/app
   redis:
     image: redis:7-alpine
-volumes:
-  data:
+    ports:
+      - "127.0.0.1:6379:6379"
