@@ -3,13 +3,11 @@ FROM python:3.12-alpine
 # install curl for healthcheck
 RUN apk add --no-cache curl
 
-# Create a non-root user
-RUN adduser -D dockinv
-USER dockinv
-
 # Create a working directory and copy files
 WORKDIR /app
 COPY * .
+
+# this container must run as root to access the docker socket
 
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
