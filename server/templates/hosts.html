@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <style>
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        table, th, td { border: 1px solid black; }
+        th, td { padding: 8px; text-align: left; }
+        th { background-color: #f4f4f4; }
+
+        .triviy-high { color: red; }
+        .triviy-medium { color: orange; }
+        .triviy-low { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>Hosts Overview</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Last Successful Agent Call</th>
+                <th>Docker Containers</th>
+                <th>Docker Images</th>
+                <th>End-of-Life Images</th>
+                <th>Aggregated Trivy Findings</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in data %}
+            <tr>
+                <td>{{ entry.name }}</td>
+                <td>{{ entry.last_successful_call }}</td>
+                <td>{{ entry.docker_containers }}</td>
+                <td>{{ entry.docker_images }}</td>
+                <td>{{ entry.eol_images }}</td>
+                <td>
+                    <span class="triviy-high">{{ entry.trivy_findings['high'] }}</span> |
+                    <span class="triviy-medium">{{ entry.trivy_findings['medium'] }}</span> |
+                    <span class="triviy-low">{{ entry.trivy_findings['low'] }}</span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

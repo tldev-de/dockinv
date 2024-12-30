@@ -3,6 +3,7 @@ from flask import Flask
 from config import Config
 from extensions import db, migrate
 from routes.general import general
+from routes.frontend import frontend
 
 
 def create_app(config_object=Config):
@@ -23,6 +24,7 @@ def register_extensions(app):
 
 def register_blueprints(app):
     app.register_blueprint(general)
+    app.register_blueprint(frontend)
     return None
 
 
