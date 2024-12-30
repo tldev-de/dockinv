@@ -5,6 +5,7 @@ from flask import Flask
 from dockinv_server.config import Config
 from dockinv_server.extensions import db, migrate
 from dockinv_server.routes.general import general
+from dockinv_server.routes.frontend import frontend
 import dockinv_server.commands as commands
 
 
@@ -26,6 +27,7 @@ def register_extensions(app):
 
 def register_blueprints(app):
     app.register_blueprint(general)
+    app.register_blueprint(frontend)
     return None
 
 
