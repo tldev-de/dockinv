@@ -8,8 +8,8 @@ RUN curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/
 RUN curl -sSfL https://raw.githubusercontent.com/xeol-io/xeol/main/install.sh | sh -s -- -b /usr/local/bin
 
 
-# Create a non-root user
-RUN adduser -D dockinv
+# Create a non-root user and corresponding volume folder
+RUN adduser -D dockinv; mkdir -p /data; chown dockinv /data
 USER dockinv
 
 # Create a working directory and copy files
