@@ -23,6 +23,7 @@ services:
       - redis
     environment:
       - DATABASE_AUTO_UPGRADE=1
+      - HOSTS_ADD_DEV_AGENT=1
     volumes:
         - ./data:/data
         - ./server:/app
