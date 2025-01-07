@@ -6,6 +6,7 @@
     <img src="https://badges.fw-web.space/github/last-commit/tldev-de/dockinv">
     <img src="https://badges.fw-web.space/github/release/tldev-de/dockinv">
     <img src="https://badges.fw-web.space/github/actions/workflow/status/tldev-de/dockinv/build.yml?event=release">
+    <a href="https://sonarcloud.io/summary/overall?id=tldev-de_dockinv" target="_blank"><img src="https://sonarcloud.io/api/project_badges/measure?project=tldev-de_dockinv&metric=alert_status"></a>
     <img src="https://badges.fw-web.space/docker/pulls/tldevde/dockinv-agent?label=agent%20docker%20pulls">
     <img src="https://badges.fw-web.space/docker/pulls/tldevde/dockinv-server?label=server%20docker%20pulls">
 </p>
