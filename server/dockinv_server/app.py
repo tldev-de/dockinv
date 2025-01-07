@@ -1,11 +1,8 @@
-import inspect
-import click
 from flask import Flask
 
 from dockinv_server.config import Config
 from dockinv_server.extensions import db, migrate
 from dockinv_server.routes.general import general
-import dockinv_server.commands as commands
 
 
 def create_app(config_object=Config):
@@ -14,7 +11,7 @@ def create_app(config_object=Config):
 
     register_blueprints(app)
     register_extensions(app)
-    register_commands(app, commands)
+    register_commands(app)
     return app
 
 
@@ -29,10 +26,13 @@ def register_blueprints(app):
     return None
 
 
-def register_commands(app: Flask, commands_module):
+def register_commands(app: Flask):
     """
     Register click commands from the commands module. Register only groups.
     """
-    for name, obj in inspect.getmembers(commands_module):
-        if isinstance(obj, click.Group):
-            app.cli.add_command(obj)
+    from dockinv_server.commands.images import images
+    app.cli.add_command(images)
+    from dockinv_server.commands.hosts import hosts
+    app.cli.add_command(hosts)
+    from dockinv_server.commands.containers import containers
+    app.cli.add_command(containers)
