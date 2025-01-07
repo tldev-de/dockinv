@@ -16,12 +16,14 @@ services:
      - "8000:8000"
     depends_on:
       - redis
+    environment:
+      - DATABASE_AUTO_UPGRADE=1
     volumes:
         - data:/data
 
   worker:
     image: tldevde/dockinv-server:latest
-    command: celery -A dockinv_server.tasks worker -l info -B
+    command: celery -A tasks worker -l info -B
     restart: always
     depends_on:
       - redis

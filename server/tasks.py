@@ -1,6 +1,5 @@
 import json
 import subprocess
-import time
 import requests
 from datetime import datetime, timezone, timedelta
 
@@ -8,10 +7,10 @@ from celery import Celery
 from celery.utils.log import get_task_logger
 from sqlalchemy import or_, null
 
-from dockinv_server.config import Config
-from dockinv_server.models import Image, Host, Container
+from config import Config
+from models import Image, Host, Container
 
-celery = Celery('dockinv_server.tasks', broker_connection_retry_on_startup=True)
+celery = Celery('tasks', broker_connection_retry_on_startup=True)
 
 celery.conf.add_defaults(Config)
 
@@ -22,7 +21,8 @@ class ContextTask(celery.Task):
     abstract = True
 
     def __call__(self, *args, **kwargs):
-        from dockinv_server.app import create_app
+
+        from app import create_app
         with create_app(Config).app_context():
             return super(ContextTask, self).__call__(*args, **kwargs)
 
@@ -35,17 +35,17 @@ def setup_periodic_tasks(**kwargs):
     celery.add_periodic_task(
         name='trivy_background_task',
         schedule=int(Config.TASK_TRIVY_INTERVAL) * 60,
-        sig=celery.signature('dockinv_server.tasks.trivy_background_task')
+        sig=celery.signature('tasks.trivy_background_task')
     )
     celery.add_periodic_task(
         name='xeol_background_task',
         schedule=int(Config.TASK_XEOL_INTERVAL) * 60,
-        sig=celery.signature('dockinv_server.tasks.xeol_background_task')
+        sig=celery.signature('tasks.xeol_background_task')
     )
     celery.add_periodic_task(
         name='data_collector_background_task',
         schedule=int(Config.TASK_DATA_COLLECTOR_INTERVAL) * 60,
-        sig=celery.signature('dockinv_server.tasks.data_collector_background_task')
+        sig=celery.signature('tasks.data_collector_background_task')
     )
 
 

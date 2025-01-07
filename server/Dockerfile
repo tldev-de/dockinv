@@ -22,6 +22,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Set the PATH
 ENV PATH=/home/dockinv/.local/bin:$PATH
 #RUN echo 'export "PATH=$PATH:/home/dockinv/.local/bin"' >> /etc/profile
+ENV PYTHONPATH="${PYTHONPATH}:/app"
 
 # Expose the port
 EXPOSE 8000
@@ -30,4 +31,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=10s --timeout=5s --retries=3 --start-period=10s CMD curl -f "http://localhost:8000/health" || exit
 
 # Run the application
-CMD ["gunicorn", "-b", "0.0.0.0:8000", "dockinv_server.app:create_app()", "--workers=4"]
+ENTRYPOINT ["./docker-entrypoint.sh"]
+CMD ["gunicorn", "-b", "0.0.0.0:8000", "app:create_app()", "--workers=4"]

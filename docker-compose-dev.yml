@@ -21,6 +21,8 @@ services:
      - "127.0.0.1:8000:8000"
     depends_on:
       - redis
+    environment:
+      - DATABASE_AUTO_UPGRADE=1
     volumes:
         - ./data:/data
         - ./server:/app
@@ -29,12 +31,14 @@ services:
     build:
       context: ./server
       dockerfile: Dockerfile
-    command: celery -A dockinv_server.tasks worker -l info -B
+    command: celery -A tasks worker -l info -B
     restart: always
     environment:
-      TASK_TRIVY_INTERVAL: 1
-      TASK_XEOL_INTERVAL: 1
-      TASK_DATA_COLLECTOR_INTERVAL: 1
+      - TASK_TRIVY_INTERVAL=1
+      - TASK_XEOL_INTERVAL=1
+      - TASK_DATA_COLLECTOR_INTERVAL=1
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     depends_on:
       - redis
     volumes:

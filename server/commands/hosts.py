@@ -3,8 +3,8 @@ from click_aliases import ClickAliasedGroup
 from flask.cli import with_appcontext
 from sqlalchemy import or_
 
-from dockinv_server.models import Host
-from dockinv_server.util import render_table, generate_random_string
+from models import Host
+from util import render_table, generate_random_string
 
 
 @click.group(cls=ClickAliasedGroup)

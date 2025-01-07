@@ -1,8 +1,8 @@
 from flask import Flask
 
-from dockinv_server.config import Config
-from dockinv_server.extensions import db, migrate
-from dockinv_server.routes.general import general
+from config import Config
+from extensions import db, migrate
+from routes.general import general
 
 
 def create_app(config_object=Config):
@@ -30,9 +30,14 @@ def register_commands(app: Flask):
     """
     Register click commands from the commands module. Register only groups.
     """
-    from dockinv_server.commands.images import images
+    from commands.images import images
     app.cli.add_command(images)
-    from dockinv_server.commands.hosts import hosts
+    from commands.hosts import hosts
     app.cli.add_command(hosts)
-    from dockinv_server.commands.containers import containers
+    from commands.containers import containers
     app.cli.add_command(containers)
+
+
+if __name__ == '__main__':
+    create_app = create_app()
+    create_app.run(host="127.0.0.1", port=8000)

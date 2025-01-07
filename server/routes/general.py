@@ -1,10 +1,10 @@
 from flask import jsonify, Blueprint
 from sqlalchemy.sql import text
-from dockinv_server.extensions import db
+from extensions import db
 import subprocess
 import re
 
-from dockinv_server.models.host import Host
+from models.host import Host
 
 general = Blueprint('general', __name__, static_folder='../static')
 

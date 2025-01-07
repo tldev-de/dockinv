@@ -1,5 +1,5 @@
 from tabulate import tabulate
-from dockinv_server.extensions import db
+from extensions import db
 import random
 import string
 

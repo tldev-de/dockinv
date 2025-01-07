@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
-from dockinv_server.extensions import db
+from extensions import db
 from datetime import datetime, timezone
-from dockinv_server.models.base_model import BaseModel
+from models.base_model import BaseModel
 
 
 @dataclass

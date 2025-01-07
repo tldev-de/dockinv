@@ -2,8 +2,8 @@ import click
 from click_aliases import ClickAliasedGroup
 from flask.cli import with_appcontext
 
-from dockinv_server.models import Container
-from dockinv_server.util import render_table
+from models import Container
+from util import render_table
 
 
 @click.group(cls=ClickAliasedGroup)
