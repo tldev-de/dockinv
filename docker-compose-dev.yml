@@ -4,6 +4,7 @@ services:
     build:
       context: ./agent
       dockerfile: Dockerfile
+    command: flask --app agent --debug run --host 0.0.0.0 --port 9999
     restart: always
     ports:
       - "9999:9999"
@@ -16,6 +17,7 @@ services:
     build:
       context: ./server
       dockerfile: Dockerfile
+    command: flask --debug run --host 0.0.0.0 --port 8000
     restart: always
     ports:
      - "127.0.0.1:8000:8000"
