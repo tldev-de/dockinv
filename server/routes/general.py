@@ -11,8 +11,7 @@ general = Blueprint('general', __name__, static_folder='../static')
 
 @general.route('/', methods=['GET'])
 def get_home():
-    c = Host.query.all()
-    return jsonify(c)
+    return "there is nothing to see yet, please use the cli (see readme)! :)"
 
 
 @general.route('/health', methods=['GET'])
