@@ -34,7 +34,7 @@ services:
     build:
       context: ./server
       dockerfile: Dockerfile
-    command: celery -A tasks worker -l info -B
+    command: celery -b redis://redis:6379/0 -A tasks worker -l info -B -s /tmp/celerybeat-schedule
     restart: always
     environment:
       - TASK_TRIVY_INTERVAL=1
