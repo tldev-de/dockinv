@@ -5,19 +5,22 @@ from flask import render_template, Blueprint
 
 from models.host import Host
 
-frontend = Blueprint('frontend', __name__, url_prefix='/app')
+frontend = Blueprint('frontend', __name__)
 
 
 def count_eol_images(host):
     eol_images_set = set()  # To ensure each image is counted only once
     for container in host.containers:
-        image = container.image
-        if image and image.status_xeol:
-            status_xeol = image.status_xeol
-            matches = status_xeol.get("matches", [])
-            if any("Eol" in match["Cycle"] for match in matches):
-                eol_images_set.add(image.id)  # Use image.id as the unique identifier
+        if is_image_eol(container.image):
+            eol_images_set.add(container.image.id)  # Use image.id as the unique identifier
     return len(eol_images_set)
+
+def is_image_eol(image):
+    if not image.status_xeol:
+        return False
+    status_xeol = image.status_xeol
+    matches = status_xeol.get("matches", [])
+    return any("Eol" in match["Cycle"] for match in matches)
 
 
 @dataclass
@@ -31,18 +34,29 @@ def count_trivy_findings(host) -> TrivyFindings:
     for container in host.containers:
         image = container.image
         if image and image.status_trivy:
-            status_trivy = image.status_trivy
-            results = status_trivy["Results"]
-            for result in results:
-                if "Vulnerabilities" in result:
-                    for vulnerability in result["Vulnerabilities"]:
-                        severity = vulnerability["Severity"]
-                        if severity == "HIGH":
-                            trivy_findings.high += 1
-                        elif severity == "MEDIUM":
-                            trivy_findings.medium += 1
-                        elif severity == "LOW":
-                            trivy_findings.low += 1
+            image_findings = count_trivy_findings(image)
+            trivy_findings.high += image_findings.high
+            trivy_findings.medium += image_findings.medium
+            trivy_findings.low += image_findings.low
+    return trivy_findings
+
+
+def count_trivy_findings_image(image):
+    if not image or not image.status_trivy:
+        return TrivyFindings(0, 0, 0)
+    trivy_findings = TrivyFindings(0, 0, 0)
+    status_trivy = image.status_trivy
+    results = status_trivy["Results"]
+    for result in results:
+        if "Vulnerabilities" in result:
+            for vulnerability in result["Vulnerabilities"]:
+                severity = vulnerability["Severity"]
+                if severity == "HIGH":
+                    trivy_findings.high += 1
+                elif severity == "MEDIUM":
+                    trivy_findings.medium += 1
+                elif severity == "LOW":
+                    trivy_findings.low += 1
     return trivy_findings
 
 
@@ -59,6 +73,7 @@ def get_hosts():
         trivy_findings = count_trivy_findings(host)
 
         data.append({
+            'id': host.id,
             'name': host.name,
             'last_successful_call': last_call,
             'docker_containers': docker_containers,
@@ -68,3 +83,28 @@ def get_hosts():
         })
 
     return render_template('hosts.html', data=data)
+
+
+@frontend.route('/hosts/<int:host_id>', methods=['GET'])
+def get_host(host_id):
+    host = Host.query.get(host_id)
+    if not host:
+        return "Host not found", 404
+    data = {
+        'host': {
+            'id': host.id,
+            'name': host.name,
+        },
+        'containers': [],
+    }
+    for container in host.containers:
+        image = container.image
+        data['containers'].append({
+            'name': container.name,
+            'image': container.image_string,
+            'image_hash': container.image.repo_digest,
+            'image_eol': is_image_eol(image),
+            'trivy_findings': count_trivy_findings_image(image),
+        })
+
+    return render_template('host.html', data=data)
