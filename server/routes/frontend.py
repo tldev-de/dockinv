@@ -35,7 +35,7 @@ def count_trivy_findings(host) -> TrivyFindings:
     for container in host.containers:
         image = container.image
         if image and image.status_trivy:
-            image_findings = count_trivy_findings(image)
+            image_findings = count_trivy_findings_image(image)
             trivy_findings.high += image_findings.high
             trivy_findings.medium += image_findings.medium
             trivy_findings.low += image_findings.low
