@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from flask import render_template, Blueprint
 
 from models.host import Host
+from models.image import Image
 
 frontend = Blueprint('frontend', __name__)
 
@@ -108,3 +109,23 @@ def get_host(host_id):
         })
 
     return render_template('host.html', data=data)
+
+
+@frontend.route('/images', methods=['GET'])
+def get_images():
+    images = Image.query.all()
+
+    data = []
+    for image in images:
+        is_eol = is_image_eol(image)
+        trivy_findings = count_trivy_findings_image(image)
+        usage_count = len(image.containers)
+
+        data.append({
+            'name': image.name,
+            'image_eol': is_eol,
+            'trivy_findings': trivy_findings,
+            'usage_count': usage_count,
+        })
+
+    return render_template('images.html', data=data)
