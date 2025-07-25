@@ -1,4 +1,4 @@
-FROM python:3.12-alpine
+FROM python:3.13.2-alpine
 
 # install curl for healthcheck
 RUN apk add --no-cache curl
