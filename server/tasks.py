@@ -86,7 +86,7 @@ def xeol_background_task():
         logger.info(f'current Image: {image.name} ({image.repo_digest})')
         try:
             result = subprocess.run(
-                ['xeol', f'registry:{image.repo_digest}', '--output', 'json'],
+                ['xeol', f'docker:{image.repo_digest}', '--output', 'json'],
                 check=True,
                 capture_output=True,
                 text=True
