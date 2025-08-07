@@ -3,6 +3,9 @@ name: Build and Push Docker Image
 on:
   release:
     types: [created]
+  push:
+    branches:
+      - main
 
 jobs:
   build:
@@ -33,7 +36,18 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Build and push Docker image agent
+    - name: Build and push Docker image agent on main branch
+      if: github.event_name == 'push'
+      uses: docker/build-push-action@v4
+      with:
+        context: agent/
+        push: true
+        tags: |
+          tldevde/dockinv-agent:main
+          ghcr.io/${{ github.repository }}/dockinv-agent:main
+
+    - name: Build and push Docker image agent on release
+      if: github.event_name == 'release'
       uses: docker/build-push-action@v4
       with:
         context: agent/
@@ -44,7 +58,18 @@ jobs:
           ghcr.io/${{ github.repository }}/dockinv-agent:latest
           ghcr.io/${{ github.repository }}/dockinv-agent:${{ github.event.release.tag_name }}
 
-    - name: Build and push Docker image server
+    - name: Build and push Docker image server on main branch
+      if: github.event_name == 'push'
+      uses: docker/build-push-action@v4
+      with:
+        context: server/
+        push: true
+        tags: |
+          tldevde/dockinv-server:main
+          ghcr.io/${{ github.repository }}/dockinv-server:main
+
+    - name: Build and push Docker image server on release
+      if: github.event_name == 'release'
       uses: docker/build-push-action@v4
       with:
         context: server/
