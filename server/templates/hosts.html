@@ -1,0 +1,42 @@
+{%  extends 'base.html.j2' %}
+
+{% block page %}Hosts{% endblock %}
+
+{% block body %}
+<table class="table table-zebra">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Last Successful Agent Call</th>
+            <th>Docker Containers</th>
+            <th>Docker Images</th>
+            <th>End-of-Life Images</th>
+            <th>Aggregated Trivy Findings</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for entry in data %}
+        <tr class="hover" onclick="openHost('{{ entry.id }}')">
+            <td>{{ entry.name }}</td>
+            <td>{{ entry.last_successful_call }}</td>
+            <td>{{ entry.docker_containers }}</td>
+            <td>{{ entry.docker_images }}</td>
+            <td>{{ entry.eol_images }}</td>
+            <td>
+                <span class="text-error">{{ entry.trivy_findings['high'] }}</span> |
+                <span class="text-warning">{{ entry.trivy_findings['medium'] }}</span> |
+                <span class="text-info">{{ entry.trivy_findings['low'] }}</span>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function openHost(id) {
+        window.location.href = "/hosts/" + id;
+    }
+</script>
+{% endblock %}

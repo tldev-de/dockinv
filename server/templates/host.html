@@ -1,0 +1,49 @@
+{%  extends 'base.html.j2' %}
+
+{% block page %}{{ data.host.name }}{% endblock %}
+
+{% block body %}
+
+<table class="table table-zebra">
+    <thead>
+    <tr>
+        <th>Container Name</th>
+        <th>Image Name / Tag</th>
+        <th>Result of Xeol</th>
+        <th>Result of Trivy</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for container in data.containers %}
+        <tr class="hover">
+            <td>{{ container.name }}</td>
+            <td>
+                <div class="tooltip" data-tip="{{ container.image_hash }}">
+                    {{ container.image }}
+                </div>
+            </td>
+            <td>
+                {% if container.image_eol %}
+                    <span class="text-error">EOL</span>
+                {% else %}
+                    <span class="text-success"></span>
+                {% endif %}
+            </td>
+            <td>
+                <span class="text-error">{{ container.trivy_findings['high'] }}</span> |
+                <span class="text-warning">{{ container.trivy_findings['medium'] }}</span> |
+                <span class="text-info">{{ container.trivy_findings['low'] }}</span>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function openHost(id) {
+        window.location.href = '/hosts/' + id;
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,44 @@
+{%  extends 'base.html.j2' %}
+
+{% block page %}Images{% endblock %}
+
+{% block body %}
+<table class="table table-zebra">
+    <thead>
+    <tr>
+        <th>Image Name</th>
+        <th>Result of XEOL</th>
+        <th>Result of Trivy</th>
+        <th>Usage by Containers</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for image in data %}
+        <tr class="hover" onclick="openImage('{{ image.id }}')">
+            <td>{{ image.name }}</td>
+            <td>
+                {% if image.image_eol %}
+                    <span class="text-error">EOL</span>
+                {% else %}
+                    <span class="text-success"></span>
+                {% endif %}
+            </td>
+            <td>
+                <span class="text-error">{{ image.trivy_findings['high'] }}</span> |
+                <span class="text-warning">{{ image.trivy_findings['medium'] }}</span> |
+                <span class="text-info">{{ image.trivy_findings['low'] }}</span>
+            </td>
+            <td>{{ image.usage_count }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function openImage(id) {
+        window.location.href = "/images/" + id;
+    }
+</script>
+{% endblock %}

@@ -1,4 +1,4 @@
-from flask import jsonify, Blueprint
+from flask import jsonify, Blueprint, render_template
 from sqlalchemy.sql import text
 from extensions import db
 import subprocess
@@ -11,7 +11,7 @@ general = Blueprint('general', __name__, static_folder='../static')
 
 @general.route('/', methods=['GET'])
 def get_home():
-    return "there is nothing to see yet, please use the cli (see readme)! :)"
+    return render_template("index.html")
 
 
 @general.route('/health', methods=['GET'])
