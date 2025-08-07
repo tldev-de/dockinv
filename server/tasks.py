@@ -55,7 +55,7 @@ def trivy_background_task():
     images = (Image.query
               .filter(Image.repo_digest != null())
               .filter(
-        or_(Image.updated_at < (datetime.now(tz=timezone.utc) - timedelta(hours=2)), Image.status_trivy == null()))
+        or_(Image.updated_at < (datetime.now(tz=timezone.utc) - timedelta(hours=24)), Image.status_trivy == null()))
               .all())
     for image in images:
         logger.info(f'current Image: {image.name} ({image.repo_digest})')
@@ -80,7 +80,7 @@ def xeol_background_task():
     images = (Image.query
               .filter(Image.repo_digest != None)  # noqa
               .filter(
-        or_(Image.updated_at < (datetime.now(tz=timezone.utc) - timedelta(hours=2)), Image.status_xeol == null()))
+        or_(Image.updated_at < (datetime.now(tz=timezone.utc) - timedelta(hours=24)), Image.status_xeol == null()))
               .all())
     for image in images:
         logger.info(f'current Image: {image.name} ({image.repo_digest})')
