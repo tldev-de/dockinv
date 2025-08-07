@@ -48,6 +48,6 @@ services:
         - ./data:/data
         - ./server:/app
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     ports:
       - "127.0.0.1:6379:6379"
