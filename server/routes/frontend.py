@@ -44,7 +44,7 @@ def count_trivy_findings(host) -> TrivyFindings:
 
 def count_trivy_findings_image(image):
     if not image or not image.status_trivy:
-        return TrivyFindings(0, 0, 0)
+        return None
     trivy_findings = TrivyFindings(0, 0, 0)
     status_trivy = image.status_trivy
     results = status_trivy["Results"]

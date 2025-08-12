@@ -30,9 +30,11 @@
             {% endif %}
         </td>
         <td>
+            {% if image.trivy_findings %}
             <span class="text-error">{{ image.trivy_findings['high'] }}</span> |
             <span class="text-warning">{{ image.trivy_findings['medium'] }}</span> |
             <span class="text-info">{{ image.trivy_findings['low'] }}</span>
+            {% endif %}
         </td>
         <td>{{ image.usage_count }}</td>
     </tr>
