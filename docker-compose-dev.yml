@@ -47,6 +47,8 @@ services:
     volumes:
         - ./data:/data
         - ./server:/app
+        - /var/run/docker.sock:/var/run/docker.sock:ro
+        - ~/.docker/config.json:/home/dockinv/.docker/config.json:ro # mount your config.json file to get access to private docker images
   redis:
     image: redis:7-alpine
     ports:

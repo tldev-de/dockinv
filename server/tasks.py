@@ -54,6 +54,7 @@ def trivy_background_task():
     logger.info(f'Task trivy started at {datetime.now().strftime("%X")}')
     images = (Image.query
               .filter(Image.repo_digest != null())
+              .filter(Image.containers.any())  # Only consider images with containers
               .filter(
         or_(Image.updated_at < (datetime.now(tz=timezone.utc) - timedelta(hours=24)), Image.status_trivy == null()))
               .all())
@@ -79,6 +80,7 @@ def xeol_background_task():
     logger.info(f'Task xeol started at {datetime.now().strftime("%X")}')
     images = (Image.query
               .filter(Image.repo_digest != None)  # noqa
+              .filter(Image.containers.any())  # Only consider images with containers
               .filter(
         or_(Image.updated_at < (datetime.now(tz=timezone.utc) - timedelta(hours=24)), Image.status_xeol == null()))
               .all())
@@ -86,7 +88,7 @@ def xeol_background_task():
         logger.info(f'current Image: {image.name} ({image.repo_digest})')
         try:
             result = subprocess.run(
-                ['xeol', f'docker:{image.repo_digest}', '--output', 'json'],
+                ['xeol', f'{image.repo_digest}', '--output', 'json'],
                 check=True,
                 capture_output=True,
                 text=True
