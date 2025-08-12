@@ -5,7 +5,7 @@
     <meta name="viewport"
           content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>DockerInv{% block title %}{% endblock %}</title>
+    <title>DockInv{% block title %}{% endblock %}</title>
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
 
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.23/dist/full.min.css" rel="stylesheet" type="text/css"/>
@@ -17,12 +17,15 @@
             padding: 0;
             margin: 0;
         }
+        .hover {
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
 <div class="navbar bg-base-100 bg-secondary-content">
     <div class="flex-1">
-        <a class="btn btn-ghost text-xl" href="/">DockerInv</a>
+        <a class="btn btn-ghost text-xl" href="/">DockInv</a>
     </div>
     <div class="navbar-center text-info">
         {{ self.page() }}

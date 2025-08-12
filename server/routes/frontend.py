@@ -18,7 +18,7 @@ def count_eol_images(host):
 
 def is_image_eol(image):
     if not image.status_xeol:
-        return False
+        return None
     status_xeol = image.status_xeol
     matches = status_xeol.get("matches", [])
     return any("Eol" in match["Cycle"] for match in matches)
@@ -113,7 +113,7 @@ def get_host(host_id):
 
 @frontend.route('/images', methods=['GET'])
 def get_images():
-    images = Image.query.all()
+    images = Image.query.filter(Image.containers.any()).all()
 
     data = []
     for image in images:
@@ -122,8 +122,11 @@ def get_images():
         usage_count = len(image.containers)
 
         data.append({
+            'id': image.id,
+            'image_tags': ', '.join(sorted({c.image_string for c in image.containers})),
             'name': image.name,
-            'image_eol': is_eol,
+            'repo_digest': image.repo_digest,
+            'is_eol': is_eol,
             'trivy_findings': trivy_findings,
             'usage_count': usage_count,
         })
