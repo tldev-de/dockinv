@@ -1,0 +1,43 @@
+{%  extends 'base.html.j2' %}
+
+{% block page %}Container details{% endblock %}
+
+{% block body %}
+<div class="font-bold text-2xl mb-2">
+    {{ containerData.name }}
+</div>
+<div class="flex" id="summary">
+    <div class="flex flex-col mb-6 w-1/2">
+        <div>
+            <span class="font-bold">Id : </span>
+            {{ containerData.id }}
+        </div>
+        <div>
+            <span class="font-bold">Host : </span>
+            {{ containerData.host }}
+        </div>
+        <div>
+            <span class="font-bold">Image : </span>
+            {{ containerData.image }}
+        </div>
+        <div>
+            <span class="font-bold">Status : </span>
+            {{ containerData.status }}
+        </div>
+    </div>
+       <div class="flex flex-col mb-6">
+        <div>
+            <span class="font-bold">Started at : </span>
+            {{ containerData.started_at }}
+        </div>
+        <div>
+            <span class="font-bold">Created at : </span>
+            {{ containerData.created_at }}
+        </div>
+        <div>
+            <span class="font-bold">Updated at : </span>
+            {{ containerData.updated_at }}
+        </div>
+    </div>
+</div>
+{% endblock %}

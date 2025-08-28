@@ -15,7 +15,7 @@
     </thead>
     <tbody>
     {% for container in data.containers %}
-        <tr class="hover">
+        <tr class="hover" onclick="openHost('{{ container.id }}')">
             <td>{{ container.name }}</td>
             <td>
                 <div class="tooltip" data-tip="{{ container.image_hash }}">
@@ -43,7 +43,7 @@
 {% block scripts %}
 <script>
     function openHost(id) {
-        window.location.href = '/hosts/' + id;
+        window.location.href = '/container/' + id;
     }
 </script>
 {% endblock %}
