@@ -1,5 +1,3 @@
-import json
-import sys
 from dataclasses import dataclass
 
 from flask import render_template, Blueprint
@@ -7,8 +5,6 @@ from flask import render_template, Blueprint
 from models.host import Host
 from models.image import Image
 from models.container import Container
-
-#from server.commands.containers import containers
 
 frontend = Blueprint('frontend', __name__)
 
@@ -184,19 +180,19 @@ def get_image_details(image_id):
     if not image:
         return "Container not found", 404
 
-    imageData = {
+    image_data = {
         'id': image.id,
         'name': image.name,
         'repo_digest': image.repo_digest,
         'is_eol': is_image_eol(image),
     }
-    trivyFindings = transform_trivy_findings_for_display(image)
-    xeolFindings = transform_xeol_findings_for_display(image)
+    trivy_findings = transform_trivy_findings_for_display(image)
+    xeol_findings = transform_xeol_findings_for_display(image)
 
     containers = Container.query.filter(Container.image_id == image_id)
-    containerData = []
+    container_data = []
     for container in containers:
-        containerData.append({
+        container_data.append({
             'id': container.id,
             'name': container.name,
             'image': container.image_string,
@@ -205,7 +201,7 @@ def get_image_details(image_id):
             #TODO get container id like "1dddca8476a57d83305787bf5f45d071fe5b143752d416389b25ccd4eda8c6a8" for link to host
         })
 
-    return render_template('image_details.html', containerData=containerData, imageData=imageData, trivyFindings=trivyFindings, xeolFindings=xeolFindings)
+    return render_template('image_details.html', container_data=container_data, image_data=image_data, trivy_findings=trivy_findings, xeol_findings=xeol_findings)
 
 @frontend.route('/container/<int:container_id>', methods=['GET'])
 def get_container_details(container_id):
@@ -213,7 +209,7 @@ def get_container_details(container_id):
     if not container:
         return "Container not found", 404
 
-    containerData = {
+    container_data = {
         'id': container.id,
         'name': container.name,
         'image': container.image_string,
@@ -225,4 +221,4 @@ def get_container_details(container_id):
         'updated_at': container.updated_at,
     }
 
-    return render_template('container_details.html', containerData=containerData)
+    return render_template('container_details.html', container_data=container_data)

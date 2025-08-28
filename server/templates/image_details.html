@@ -5,17 +5,17 @@
 {% block body %}
 <div class="flex flex-col mb-10" id="summary">
     <div class="font-bold text-2xl mb-2">
-        {{ imageData.name }}
+        {{ image_data.name }}
     </div>
     <div>
         <span class="font-bold">Repo Digest : </span>
-        {{ imageData.repo_digest }}
+        {{ image_data.repo_digest }}
     </div>
     <div>
         <span class="font-bold">EOL : </span>
-        {% if imageData.is_eol == True %}
+        {% if image_data.is_eol == True %}
             Yes
-        {% elif imageData.is_eol == None %}
+        {% elif image_data.is_eol == None %}
             No
         {% endif %}
     </div>
@@ -38,7 +38,7 @@
             </tr>
           </thead>
          <tbody>
-         {% for container in containerData %}
+         {% for container in container_data %}
             <tr>
                 <td>{{ container.id }}</td>
                 <td>{{ container.host }}</td>
@@ -78,8 +78,8 @@
         </tr>
     </thead>
     <tbody>
-    {% if trivyFindings != None %}
-        {% for finding in trivyFindings %}
+    {% if trivy_findings != None %}
+        {% for finding in trivy_findings %}
             <tr>
                 <td style="
                     {% if finding.Severity == 'CRITICAL' %}color: #b71c1c
@@ -125,8 +125,8 @@
             </tr>
         </thead>
         <tbody>
-        {% if xeolFindings != None %}
-            {% for finding in xeolFindings %}
+        {% if xeol_findings != None %}
+            {% for finding in xeol_findings %}
                 <tr>
                     <td> {{ finding.Name }} </td>
                     <td> {{ finding.Version }} </td>
