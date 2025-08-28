@@ -24,57 +24,49 @@
 <span class="font-bold">
     Container running this image
 </span>
-<table class="table table-zebra mb-10" id="container" >
-      <thead>
-        <tr>
-            <th>Id</th>
-                  <th>Host</th>
-            <th>Stack</th>
-            <th>Container</th>
-            <th>Image</th>
-            <th>Status</th>
-            <th>Portainer</th>
-        </tr>
-      </thead>
-     <tbody>
-     {% for container in containerData %}
-        <tr>
-            <td>
-                {{ container.id }}
-            </td>
-            <td>
-                {{ container.host }}
-            </td>
-            <td>
-                -
-            </td>
-            <td>
-                <a href="/container/{{ container.id }}" class="underline"> {{ container.name }} </a>
-            </td>
-            <td>
-                {{ container.image }}
-            </td>
-            <td>
-                {{ container.status }}
-            </td>
-            <td>
-                <!-- TODO: Add link to container details page -->
-                <a href="">
-                   <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-                   </svg>
-                </a>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-
-<!-- list of findings -->
+<div class="overflow-x-auto max-h-[32rem] mb-10">
+    <table class="table table-zebra table-pin-rows table-pin-cols" id="container" >
+          <thead>
+            <tr>
+                <th>Id</th>
+                      <th>Host</th>
+                <th>Stack</th>
+                <th>Container</th>
+                <th>Image</th>
+                <th>Status</th>
+                <th>Portainer</th>
+            </tr>
+          </thead>
+         <tbody>
+         {% for container in containerData %}
+            <tr>
+                <td>{{ container.id }}</td>
+                <td>{{ container.host }}</td>
+                <td>-</td>
+                <td>
+                    <a href="/container/{{ container.id }}" class="underline"> {{ container.name }} </a>
+                </td>
+                <td>{{ container.image }}</td>
+                <td>{{ container.status }}</td>
+                <td>
+                    <!-- TODO: Add link to container details page -->
+                    <a href="">
+                       <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                       </svg>
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<!-- list of trivy findings -->
 <span class="font-bold">
     Trivy Findings
 </span>
-<table class="table table-zebra mb-10" id="list">
+<div class="overflow-x-auto max-h-[32rem] mb-10">
+    <table class="table table-zebra table-pin-rows table-pin-cols" id="trivyList">
     <thead>
         <tr>
             <th>Importance</th>
@@ -115,8 +107,35 @@
     {% endif %}
     </tbody>
 </table>
+</div>
 
 
-<table class="table table-zebra">
-</table>
+<!-- list of xeol findings -->
+<span class="font-bold">
+    XEol Findings
+</span>
+<div class="overflow-x-auto max-h-[32rem]">
+    <table class="table table-zebra table-pin-rows table-pin-cols" id="xeolList">
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Version</th>
+                <th>Release date</th>
+                <th>EOL date</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% if xeolFindings != None %}
+            {% for finding in xeolFindings %}
+                <tr>
+                    <td> {{ finding.Name }} </td>
+                    <td> {{ finding.Version }} </td>
+                    <td> {{ finding.ReleaseDate }} </td>
+                    <td> {{ finding.EolDate }} </td>
+                </tr>
+             {% endfor %}
+        {% endif %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}

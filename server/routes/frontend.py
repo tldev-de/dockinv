@@ -85,6 +85,24 @@ def transform_trivy_findings_for_display(image):
     all_findings.sort(key=lambda v: severity_order.get(v.get("Severity", "UNKNOWN"), 4))
     return all_findings
 
+def transform_xeol_findings_for_display(image):
+    if not image or not image.status_xeol:
+        return None
+
+    all_findings = []
+    status_xeol = image.status_xeol
+    matches = status_xeol['matches']
+    for match in matches:
+        if "Cycle" in match:
+            all_findings.append({
+                'Name': match['Cycle']['ProductName'],
+                'Version': match['artifact']['version'],
+                'ReleaseDate': match['Cycle']['ReleaseDate'],
+                'EolDate': match['Cycle']['Eol'],
+            })
+
+    all_findings.sort(key=lambda x: x['EolDate'])
+    return all_findings
 ######### Routes #########
 
 @frontend.route('/hosts', methods=['GET'])
@@ -173,6 +191,7 @@ def get_image_details(image_id):
         'is_eol': is_image_eol(image),
     }
     trivyFindings = transform_trivy_findings_for_display(image)
+    xeolFindings = transform_xeol_findings_for_display(image)
 
     containers = Container.query.filter(Container.image_id == image_id)
     containerData = []
@@ -186,7 +205,7 @@ def get_image_details(image_id):
             #TODO get container id like "1dddca8476a57d83305787bf5f45d071fe5b143752d416389b25ccd4eda8c6a8" for link to host
         })
 
-    return render_template('image_details.html', containerData=containerData, imageData=imageData, trivyFindings=trivyFindings)
+    return render_template('image_details.html', containerData=containerData, imageData=imageData, trivyFindings=trivyFindings, xeolFindings=xeolFindings)
 
 @frontend.route('/container/<int:container_id>', methods=['GET'])
 def get_container_details(container_id):
