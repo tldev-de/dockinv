@@ -71,6 +71,41 @@
     </label>
 </div>
 {% block scripts %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('table').forEach(function(table) {
+                const headers = table.querySelectorAll('th');
+                let sortDirection = {};
+
+                headers.forEach((th, idx) => {
+                    th.style.cursor = 'pointer';
+                    th.addEventListener('click', function () {
+                        const tbody = table.querySelector('tbody');
+                        if (!tbody) return;
+                        const rows = Array.from(tbody.querySelectorAll('tr'));
+                        const dir = sortDirection[idx] === 'asc' ? 'desc' : 'asc';
+                        sortDirection = {};
+                        sortDirection[idx] = dir;
+
+                        rows.sort((a, b) => {
+                            let aText = a.children[idx]?.innerText.trim() ?? '';
+                            let bText = b.children[idx]?.innerText.trim() ?? '';
+                            let aNum = parseFloat(aText.replace(/[^0-9.\-]/g, ''));
+                            let bNum = parseFloat(bText.replace(/[^0-9.\-]/g, ''));
+                            if (!isNaN(aNum) && !isNaN(bNum)) {
+                                return dir === 'asc' ? aNum - bNum : bNum - aNum;
+                            }
+                            return dir === 'asc'
+                                ? aText.localeCompare(bText)
+                                : bText.localeCompare(aText);
+                        });
+
+                        rows.forEach(row => tbody.appendChild(row));
+                    });
+                });
+            });
+        });
+    </script>
 {% endblock %}
 </body>
 </html>

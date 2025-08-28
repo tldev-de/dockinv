@@ -217,6 +217,7 @@ def get_container_details(container_id):
         'id': container.id,
         'name': container.name,
         'image': container.image_string,
+        'image_id': container.image_id,
         'host': container.host.name,
         'status': container.status,
         'started_at': container.started_at,
