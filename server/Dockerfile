@@ -26,7 +26,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Build Tailwind CSS (ensure daisyui.css exists in static/css)
 RUN cd /app/static/css && \
-    curl -fLo tailwindcss https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64-musl && \
+    curl -fSLo tailwindcss https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64-musl && \
     chmod +x tailwindcss && \
     ./tailwindcss -i daisyui.css -o theme.css && \
     rm tailwindcss
