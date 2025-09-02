@@ -28,7 +28,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN cd /app/static/css && \
     curl -fLo tailwindcss https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64-musl && \
     chmod +x tailwindcss && \
-    ./tailwindcss -i daisyui.css -o theme.css
+    ./tailwindcss -i daisyui.css -o theme.css && \
+    rm tailwindcss
 
 # Set environment variables
 ENV PATH=/home/dockinv/.local/bin:$PATH
