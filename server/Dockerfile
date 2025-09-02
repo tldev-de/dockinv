@@ -1,4 +1,4 @@
-FROM python:3.13-alpine
+FROM python:alpine3.21
 
 # Install dependencies and required libraries
 RUN apk add --no-cache curl libstdc++ libgcc
@@ -9,8 +9,8 @@ RUN curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/
 
 # Create app directories and non-root user
 RUN adduser -D dockinv && \
-    mkdir -p /data /app/server/static/css && \
-    chown -R dockinv:dockinv /data /app
+    mkdir -p /data && \
+    chown -R dockinv:dockinv /data
 
 # Set working directory
 WORKDIR /app
@@ -18,16 +18,15 @@ WORKDIR /app
 # Copy project files as dockinv
 COPY --chown=dockinv:dockinv . .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-
 # Switch to non-root user
 USER dockinv
 
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
 # Build Tailwind CSS (ensure daisyui.css exists in static/css)
-WORKDIR /app/server/static/css
-RUN curl -sLo tailwindcss https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64-musl && \
-    curl -sLO https://github.com/saadeghi/daisyui/releases/latest/download/daisyui.js && \
+RUN cd /app/static/css && \
+    curl -fLo tailwindcss https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64-musl && \
     chmod +x tailwindcss && \
     ./tailwindcss -i daisyui.css -o theme.css
 
