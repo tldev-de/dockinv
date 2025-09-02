@@ -7,7 +7,6 @@ RUN apk add --no-cache curl
 RUN curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
 RUN curl -sSfL https://raw.githubusercontent.com/xeol-io/xeol/main/install.sh | sh -s -- -b /usr/local/bin
 
-
 # Create a non-root user and corresponding volume folder
 RUN adduser -D dockinv; mkdir -p /data; chown dockinv /data
 USER dockinv
