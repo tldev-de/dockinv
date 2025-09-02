@@ -1,34 +1,46 @@
 FROM python:3.13-alpine
 
-# install curl for healthcheck
-RUN apk add --no-cache curl
+# Install dependencies and required libraries
+RUN apk add --no-cache curl libstdc++ libgcc
 
 # Install scanner binaries
-RUN curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-RUN curl -sSfL https://raw.githubusercontent.com/xeol-io/xeol/main/install.sh | sh -s -- -b /usr/local/bin
+RUN curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin && \
+    curl -sSfL https://raw.githubusercontent.com/xeol-io/xeol/main/install.sh | sh -s -- -b /usr/local/bin
 
-# Create a non-root user and corresponding volume folder
-RUN adduser -D dockinv; mkdir -p /data; chown dockinv /data
-USER dockinv
+# Create app directories and non-root user
+RUN adduser -D dockinv && \
+    mkdir -p /data /app/server/static/css && \
+    chown -R dockinv:dockinv /data /app
 
-# Create a working directory and copy files
+# Set working directory
 WORKDIR /app
-COPY --chown=dockinv:dockinv  . .
 
-# Install dependencies
+# Copy project files as dockinv
+COPY --chown=dockinv:dockinv . .
+
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Set the PATH
+# Switch to non-root user
+USER dockinv
+
+# Build Tailwind CSS (ensure daisyui.css exists in static/css)
+WORKDIR /app/server/static/css
+RUN curl -sLo tailwindcss https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64-musl && \
+    curl -sLO https://github.com/saadeghi/daisyui/releases/latest/download/daisyui.js && \
+    chmod +x tailwindcss && \
+    ./tailwindcss -i daisyui.css -o theme.css
+
+# Set environment variables
 ENV PATH=/home/dockinv/.local/bin:$PATH
-#RUN echo 'export "PATH=$PATH:/home/dockinv/.local/bin"' >> /etc/profile
 ENV PYTHONPATH="${PYTHONPATH}:/app"
 
-# Expose the port
+# Expose port
 EXPOSE 8000
 
 # Healthcheck
 HEALTHCHECK --interval=10s --timeout=5s --retries=3 --start-period=10s CMD curl -f "http://localhost:8000/health" || exit
 
-# Run the application
+# Entrypoint and default command
 ENTRYPOINT ["./docker-entrypoint.sh"]
 CMD ["gunicorn", "-b", "0.0.0.0:8000", "app:create_app()", "--workers=4"]
