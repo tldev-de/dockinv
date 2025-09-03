@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 
-from flask import render_template, Blueprint
+from flask import render_template, Blueprint, request
+from util import generate_random_string
+from sqlalchemy import or_
 
 from models.host import Host
 from models.image import Image
@@ -14,7 +16,8 @@ class TrivyFindings:
     medium: int
     low: int
 
-######### utility functions #########
+
+######### Functions #########
 
 def count_eol_images(host):
     eol_images_set = set()  # To ensure each image is counted only once
@@ -54,8 +57,7 @@ def count_trivy_findings_image(image):
         if "Vulnerabilities" in result:
             for vulnerability in result["Vulnerabilities"]:
                 severity = vulnerability["Severity"]
-                # Where is 'CRITICAL' ?
-                if severity == "HIGH":
+                if severity == "HIGH" or severity == "CRITICAL":
                     trivy_findings.high += 1
                 elif severity == "MEDIUM":
                     trivy_findings.medium += 1
@@ -99,8 +101,11 @@ def transform_xeol_findings_for_display(image):
 
     all_findings.sort(key=lambda x: x['EolDate'])
     return all_findings
+
+
 ######### Routes #########
 
+### Hosts ###
 @frontend.route('/hosts', methods=['GET'])
 def get_hosts():
     hosts = Host.query.all()
@@ -116,6 +121,7 @@ def get_hosts():
         data.append({
             'id': host.id,
             'name': host.name,
+            'enabled': host.enabled,
             'last_successful_call': last_call,
             'docker_containers': docker_containers,
             'docker_images': docker_images,
@@ -123,7 +129,7 @@ def get_hosts():
             'trivy_findings': trivy_findings,
         })
 
-    return render_template('hosts.html', data=data)
+    return render_template('hosts/hosts.html', data=data)
 
 
 @frontend.route('/hosts/<int:host_id>', methods=['GET'])
@@ -144,14 +150,101 @@ def get_host(host_id):
             'name': container.name,
             'id': container.id,
             'image': container.image_string,
+            'image_id': container.image_id,
             'image_hash': container.image.repo_digest,
             'image_eol': is_image_eol(image),
             'trivy_findings': count_trivy_findings_image(image),
         })
 
-    return render_template('host.html', data=data)
+    return render_template('hosts/host.html', data=data)
 
+@frontend.route('/hosts/add', methods=['GET'])
+def add_host():
+    return render_template('hosts/add.html')
 
+@frontend.route('/hosts/save', methods=['POST'])
+def save_host():
+    name = request.form['name']
+    address = request.form['address']
+    token = request.form['token']
+    enable = 1 if 'enable' in request.form else 0
+
+    existing = Host.query.filter(or_(Host.name == name, Host.address == address)).first()
+    if existing is not None:
+        return render_template('/util/message.html',
+                               msg={
+                                   'header' : 'Hosts',
+                                   'type': 'error',
+                                   'content': 'Host with this name or address does already exist!',
+                                   'redirect': '/hosts/add'
+                               })
+
+    # generate token if not provided
+    if token is None or token.strip() == '':
+        token = generate_random_string(32)
+    # add trailing slash to address if not present
+    if address[-1] != '/':
+        address += '/'
+
+    host = Host(name=name, address=address, enabled=enable, token=token)
+    host.save()
+    return render_template('/util/message.html',
+                           msg={
+                               'header' : 'Hosts',
+                               'type': 'success',
+                               'content': 'Host successfully added!',
+                               'redirect': '/hosts'
+                           })
+
+@frontend.route('/hosts/update/<int:host_id>', methods=['POST'])
+def update_host(host_id):
+    host = Host.query.filter(Host.id == host_id).first()
+    if not host:
+        return "Host not found", 404
+
+    host.name = request.form['name']
+    host.address = request.form['address']
+    host.token = request.form['token']
+    host.enabled = 1 if 'enabled' in request.form else 0
+    host.save()
+
+    return render_template('/util/message.html',
+                           msg={
+                               'header' : 'Hosts',
+                               'type': 'success',
+                               'content': 'Host successfully updated!',
+                               'redirect': '/hosts'
+                           })
+
+@frontend.route('/hosts/edit/<int:host_id>', methods=['GET'])
+def edit_host(host_id):
+    host = Host.query.filter(Host.id == host_id).first()
+    if not host:
+        return "Host not found", 404
+    data = {
+        'id': host.id,
+        'name': host.name,
+        'address': host.address,
+        'token': host.token,
+        'enabled': host.enabled,
+    }
+    return render_template('hosts/edit.html', host=data)
+
+@frontend.route('/hosts/delete/<int:host_id>', methods=['GET'])
+def delete_host(host_id):
+    host = Host.query.filter(Host.id == host_id).first()
+    if not host:
+        return "Host not found", 404
+    host.delete()
+    return render_template('/util/message.html',
+                           msg={
+                               'header' : 'Hosts',
+                               'type': 'success',
+                               'content': 'Host successfully deleted!',
+                               'redirect': '/hosts'
+                           })
+
+### Images ###
 @frontend.route('/images', methods=['GET'])
 def get_images():
     images = Image.query.filter(Image.containers.any()).all()
@@ -172,7 +265,7 @@ def get_images():
             'usage_count': usage_count,
         })
 
-    return render_template('images.html', data=data)
+    return render_template('images/images.html', data=data)
 
 @frontend.route('/images/<int:image_id>', methods=['GET'])
 def get_image_details(image_id):
@@ -201,8 +294,9 @@ def get_image_details(image_id):
             #TODO get container id like "1dddca8476a57d83305787bf5f45d071fe5b143752d416389b25ccd4eda8c6a8" for link to host
         })
 
-    return render_template('image_details.html', container_data=container_data, image_data=image_data, trivy_findings=trivy_findings, xeol_findings=xeol_findings)
+    return render_template('images/details.html', container_data=container_data, image_data=image_data, trivy_findings=trivy_findings, xeol_findings=xeol_findings)
 
+### Container ###
 @frontend.route('/container/<int:container_id>', methods=['GET'])
 def get_container_details(container_id):
     container = Container.query.filter(Container.id == container_id).first()

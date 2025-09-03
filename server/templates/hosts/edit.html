@@ -1,0 +1,39 @@
+{%  extends 'base.html.j2' %}
+
+{% block page %} {{ host.name }} {% endblock %}
+
+{% block body %}
+<form class="form-control max-w-96" method="post" action="/hosts/update/{{ host.id }}">
+    <div class="mb-4">
+        <label for="name" class="label">
+            Name
+        </label>
+        <input type="text" maxlength="255" value="{{ host.name }}" class="input input-bordered w-full" id="name" name="name" required/>
+    </div>
+    <div class="mb-4">
+        <label for="address" class="label">
+            Address
+        </label>
+        <input type="text" maxlength="80" value="{{ host.address }}" class="input input-bordered w-full" id="address" name="address" required/>
+    </div>
+    <div class="mb-4">
+        <label for="token" class="label">
+            Token (optional)
+        </label>
+        <input type="text" maxlength="32" value="{{ host.token }}" class="input input-bordered w-full " id="token" name="token"/>
+    </div>
+    <div class="mb-4 flex items-center">
+        <label for="enabled" class="label">
+            Active
+        </label>
+        <input type="checkbox" class="checkbox ml-auto mr-4" value="1" name="enabled" id="enabled" {% if host.enabled %} checked="checked" {% endif %}/>
+    </div>
+    <div class="mb-4 flex">
+        <div>
+            <button type="submit" class="btn btn-sm btn-primary max-w-md mx-auto my-4">save</button>
+            <a href="/hosts/delete/{{ host.id }}" class="btn btn-sm btn-error max-w-md mx-auto my-4">delete</a>
+        </div>
+        <a href="/hosts" class="btn btn-sm btn-neutral max-w-md my-4 ml-auto">back</a>
+    </div>
+</form>
+{% endblock %}

@@ -3,14 +3,18 @@
 {% block page %}{{ data.host.name }}{% endblock %}
 
 {% block body %}
+<div class="flex flex-row-reverse form-control mb-10">
+    <input class="input input-bordered w-1/4" type="text" id="hostFilter" placeholder="Search..."
+           onkeyup="tableFilter('hostFilter', 'containerTable', [0,1])">
+</div>
 
-<table class="table table-zebra">
+<table class="table table-zebra table-fixed" id="containerTable">
     <thead>
     <tr>
-        <th>Container Name</th>
-        <th>Image Name / Tag</th>
-        <th>Result of Xeol</th>
-        <th>Result of Trivy</th>
+        <th class="w-1/4">Container Name</th>
+        <th class="w-2/4">Image Name / Tag</th>
+        <th class="w-1/8">Result of Xeol</th>
+        <th class="w-1/8">Result of Trivy</th>
     </tr>
     </thead>
     <tbody>
@@ -19,7 +23,9 @@
                 <td>{{ container.name }}</td>
                 <td>
                     <div class="tooltip" data-tip="{{ container.image_hash }}">
-                        {{ container.image }}
+                        <a class="underline" href="/images/{{ container.image_id }}">
+                            {{ container.image }}
+                        </a>
                     </div>
                 </td>
                 <td>
@@ -41,6 +47,7 @@
 {% endblock %}
 
 {% block scripts %}
+{{ super() }}
 <script>
     function openHost(id) {
         window.location.href = '/container/' + id;
