@@ -9,7 +9,7 @@ from models.base_model import BaseModel
 class Container(db.Model, BaseModel):
     id: int = db.Column(db.Integer, primary_key=True)
     host_id: int = db.Column(db.Integer, db.ForeignKey('host.id'), nullable=False)
-    host = db.relationship('Host', backref=db.backref('containers', lazy=True))
+    host = db.relationship('Host', backref=db.backref('containers', cascade="all, delete-orphan" ,lazy=True))
     name: str = db.Column(db.String(254), nullable=False)
     image_string: str = db.Column(db.String(254), nullable=False)
     image_id: int = db.Column(db.Integer, db.ForeignKey('image.id'), nullable=False)
