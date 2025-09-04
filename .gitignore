@@ -1,3 +1,5 @@
 .idea
 .venv
+data
 server/celerybeat-schedule
+/server/static/css/tailwindcss
