@@ -1,12 +1,18 @@
 {%  extends 'base.html.j2' %}
 
-{% block page %}Hosts{% endblock %}
+{% block page %}
+    Hosts
+{% endblock %}
+
+{% block search %}
+    'hostTable', [0]
+{% endblock %}
 
 {% block body %}
 <div class="flex flex-row-reverse mb-4">
     <a href="/hosts/add" class="btn btn-sm btn-primary">Add Host</a>
 </div>
-<table class="table table-zebra">
+<table class="table table-zebra" id="hostTable">
     <thead>
         <tr>
             <th>Name</th>
@@ -55,6 +61,7 @@
 {% endblock %}
 
 {% block scripts %}
+{{ super() }}
 <script>
     function openHost(id) {
         window.location.href = "/hosts/" + id;

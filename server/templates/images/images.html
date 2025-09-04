@@ -1,12 +1,14 @@
 {%  extends 'base.html.j2' %}
 
-{% block page %}Images{% endblock %}
+{% block page %}
+    Images
+{% endblock %}
+
+{% block search %}
+    'imagesTable', [0]
+{% endblock %}
 
 {% block body %}
-<div class="flex flex-row-reverse form-control mb-10">
-    <input class="input input-bordered w-1/4" type="text" id="imageFilter" placeholder="Search..."
-    onkeyup="tableFilter('imageFilter', 'imagesTable', [0])">
-</div>
 <table class="table table-zebra" id="imagesTable">
     <thead>
     <tr>
