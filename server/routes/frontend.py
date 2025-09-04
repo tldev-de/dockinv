@@ -102,6 +102,15 @@ def transform_xeol_findings_for_display(image):
     all_findings.sort(key=lambda x: x['EolDate'])
     return all_findings
 
+def render_message(header, classification, content, redirect):
+    return render_template('/util/message.html',
+                           msg={
+                               'header' : header,
+                               'type': classification,
+                               'content': content,
+                               'redirect': redirect
+                           })
+
 
 ######### Routes #########
 
@@ -171,13 +180,7 @@ def save_host():
 
     existing = Host.query.filter(or_(Host.name == name, Host.address == address)).first()
     if existing is not None:
-        return render_template('/util/message.html',
-                               msg={
-                                   'header' : 'Hosts',
-                                   'type': 'error',
-                                   'content': 'Host with this name or address does already exist!',
-                                   'redirect': '/hosts/add'
-                               })
+        return render_message('Hosts', 'error', 'Host with this name or address does already exist!', '/hosts/add')
 
     # generate token if not provided
     if token is None or token.strip() == '':
@@ -188,13 +191,7 @@ def save_host():
 
     host = Host(name=name, address=address, enabled=enable, token=token)
     host.save()
-    return render_template('/util/message.html',
-                           msg={
-                               'header' : 'Hosts',
-                               'type': 'success',
-                               'content': 'Host successfully added!',
-                               'redirect': '/hosts'
-                           })
+    return  render_message('Hosts', 'success', 'Host successfully added!', '/hosts')
 
 @frontend.route('/hosts/update/<int:host_id>', methods=['POST'])
 def update_host(host_id):
@@ -208,13 +205,7 @@ def update_host(host_id):
     host.enabled = 1 if 'enabled' in request.form else 0
     host.save()
 
-    return render_template('/util/message.html',
-                           msg={
-                               'header' : 'Hosts',
-                               'type': 'success',
-                               'content': 'Host successfully updated!',
-                               'redirect': '/hosts'
-                           })
+    return render_message('Hosts', 'success', 'Host successfully updated!', '/hosts')
 
 @frontend.route('/hosts/edit/<int:host_id>', methods=['GET'])
 def edit_host(host_id):
@@ -236,13 +227,7 @@ def delete_host(host_id):
     if not host:
         return "Host not found", 404
     host.delete()
-    return render_template('/util/message.html',
-                           msg={
-                               'header' : 'Hosts',
-                               'type': 'success',
-                               'content': 'Host successfully deleted!',
-                               'redirect': '/hosts'
-                           })
+    return render_message('Hosts', 'success', 'Host successfully deleted!', '/hosts')
 
 ### Images ###
 @frontend.route('/images', methods=['GET'])
