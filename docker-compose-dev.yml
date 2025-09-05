@@ -18,6 +18,12 @@ services:
       context: ./server
       dockerfile: Dockerfile
     command: flask --debug run --host 0.0.0.0 --port 8000
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     restart: always
     ports:
      - "127.0.0.1:8000:8000"
@@ -35,6 +41,11 @@ services:
       context: ./server
       dockerfile: Dockerfile
     command: celery -b redis://redis:6379/0 -A tasks worker -l info -B -s /tmp/celerybeat-schedule
+    healthcheck:
+      test: [ "CMD", "celery", "-A", "tasks.celery", "inspect", "ping" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     restart: always
     environment:
       - TASK_TRIVY_INTERVAL=100

@@ -27,9 +27,6 @@ ENV PYTHONPATH="${PYTHONPATH}:/app"
 # Expose the port
 EXPOSE 8000
 
-# Healthcheck
-HEALTHCHECK --interval=10s --timeout=5s --retries=3 --start-period=10s CMD curl -f "http://localhost:8000/health" || exit
-
 # Run the application
 ENTRYPOINT ["./docker-entrypoint.sh"]
 CMD ["gunicorn", "-b", "0.0.0.0:8000", "app:create_app()", "--workers=4"]
