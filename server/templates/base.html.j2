@@ -27,8 +27,8 @@
     <div class="flex-1">
         <a class="btn btn-ghost text-xl" href="/">DockInv</a>
         <ul class="menu menu-horizontal px-1">
-            <li><a href="/images">Images</a></li>
             <li><a href="/hosts">Hosts</a></li>
+            <li><a href="/images">Images</a></li>
         </ul>
     </div>
     <div class="navbar-center text-info">
@@ -40,7 +40,7 @@
             <input class="input input-bordered" type="text" id="filter" placeholder="Search..." onkeyup="tableFilter( {{ self.search() }})">
         </div>
         {% endif %}
-        <div>
+        <div class="mr-4">
             <label class="swap swap-rotate">
                 <!-- this hidden checkbox controls the state -->
                 <input type="checkbox" class="theme-controller" value="light"/>
