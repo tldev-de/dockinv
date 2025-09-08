@@ -10,6 +10,9 @@ from models.container import Container
 
 frontend = Blueprint('frontend', __name__)
 
+HOST_NO_FOUND = "Host not found", 404
+CONTAINER_NO_FOUND = "Container not found", 404
+
 @dataclass
 class TrivyFindings:
     high: int
@@ -145,7 +148,7 @@ def get_hosts():
 def get_host(host_id):
     host = Host.query.get(host_id)
     if not host:
-        return "Host not found", 404
+        return HOST_NO_FOUND
     data = {
         'host': {
             'id': host.id,
@@ -197,7 +200,7 @@ def save_host():
 def update_host(host_id):
     host = Host.query.filter(Host.id == host_id).first()
     if not host:
-        return "Host not found", 404
+        return HOST_NO_FOUND
 
     host.name = request.form['name']
     host.address = request.form['address']
@@ -211,7 +214,8 @@ def update_host(host_id):
 def edit_host(host_id):
     host = Host.query.filter(Host.id == host_id).first()
     if not host:
-        return "Host not found", 404
+        return HOST_NO_FOUND
+
     data = {
         'id': host.id,
         'name': host.name,
@@ -219,14 +223,17 @@ def edit_host(host_id):
         'token': host.token,
         'enabled': host.enabled,
     }
+
     return render_template('hosts/edit.html', host=data)
 
 @frontend.route('/hosts/delete/<int:host_id>', methods=['GET'])
 def delete_host(host_id):
     host = Host.query.filter(Host.id == host_id).first()
     if not host:
-        return "Host not found", 404
+        return HOST_NO_FOUND
+
     host.delete()
+
     return render_message('Hosts', 'success', 'Host successfully deleted!', '/hosts')
 
 ### Images ###
@@ -256,7 +263,7 @@ def get_images():
 def get_image_details(image_id):
     image = Image.query.filter(Image.id == image_id).first()
     if not image:
-        return "Container not found", 404
+        return CONTAINER_NO_FOUND
 
     image_data = {
         'id': image.id,
@@ -286,7 +293,7 @@ def get_image_details(image_id):
 def get_container_details(container_id):
     container = Container.query.filter(Container.id == container_id).first()
     if not container:
-        return "Container not found", 404
+        return CONTAINER_NO_FOUND
 
     container_data = {
         'id': container.id,
