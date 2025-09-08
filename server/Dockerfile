@@ -1,7 +1,7 @@
 FROM python:alpine3.21
 
 # Install dependencies and required libraries
-RUN apk add --no-cache curl libstdc++ libgcc
+RUN apk add --no-cache curl libgcc libstdc++
 
 # Install scanner binaries
 RUN curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin && \
@@ -25,8 +25,8 @@ USER dockinv
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Build Tailwind CSS (ensure daisyui.css exists in static/css)
-RUN cd /app/static/css && \
-    curl -fSLo tailwindcss https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64-musl && \
+WORKDIR /app/static/css
+RUN curl -fSLo tailwindcss https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64-musl && \
     chmod +x tailwindcss && \
     ./tailwindcss -i daisyui.css -o theme.css && \
     rm tailwindcss
