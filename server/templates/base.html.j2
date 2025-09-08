@@ -73,6 +73,17 @@
     </div>
 </div>
 
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+      <div class="m-4">
+          {% for category, message in messages %}
+              <div class="alert alert-{{ category }}" role="alert">{{ message }}</div>
+            {% endfor %}
+      </div>
+  {% endif %}
+{% endwith %}
+
+
 <div class="m-8">
     {% block body %}
     {% endblock %}
@@ -83,41 +94,54 @@
 </div>
 {% block scripts %}
     <script>
-    // Basic sort functionality fpr tables
-        document.addEventListener('DOMContentLoaded', function () {
-            document.querySelectorAll('table').forEach(function(table) {
-                const headers = table.querySelectorAll('th');
-                const sortDirection = {};
 
-                headers.forEach((th, idx) => {
-                    th.style.cursor = 'pointer';
-                    th.addEventListener('click', function () {
-                        const tbody = table.querySelector('tbody');
-                        if (!tbody) return;
-                        const rows = Array.from(tbody.rows);
-                        sortDirection[idx] = sortDirection[idx] === 'asc' ? 'desc' : 'asc';
-                        const dir = sortDirection[idx];
+    document.addEventListener('DOMContentLoaded', function () {
 
-                        rows.sort((a, b) => {
-                            let aText = a.cells[idx]?.textContent.trim() ?? '';
-                            let bText = b.cells[idx]?.textContent.trim() ?? '';
-                            let aNum = parseFloat(aText.replace(/[^0-9.\-]/g, ''));
-                            let bNum = parseFloat(bText.replace(/[^0-9.\-]/g, ''));
-                            if (!isNaN(aNum) && !isNaN(bNum)) {
-                                return dir === 'asc' ? aNum - bNum : bNum - aNum;
-                            }
-                            return dir === 'asc'
-                                ? aText.localeCompare(bText)
-                                : bText.localeCompare(aText);
-                        });
+        // Basic sort functionality fpr tables
+        document.querySelectorAll('table').forEach(function(table) {
+            const headers = table.querySelectorAll('th');
+            const sortDirection = {};
 
-                        const fragment = document.createDocumentFragment();
-                        rows.forEach(row => fragment.appendChild(row));
-                        tbody.appendChild(fragment);
+            headers.forEach((th, idx) => {
+                th.style.cursor = 'pointer';
+                th.addEventListener('click', function () {
+                    const tbody = table.querySelector('tbody');
+                    if (!tbody) return;
+                    const rows = Array.from(tbody.rows);
+                    sortDirection[idx] = sortDirection[idx] === 'asc' ? 'desc' : 'asc';
+                    const dir = sortDirection[idx];
+
+                    rows.sort((a, b) => {
+                        let aText = a.cells[idx]?.textContent.trim() ?? '';
+                        let bText = b.cells[idx]?.textContent.trim() ?? '';
+                        let aNum = parseFloat(aText.replace(/[^0-9.\-]/g, ''));
+                        let bNum = parseFloat(bText.replace(/[^0-9.\-]/g, ''));
+                        if (!isNaN(aNum) && !isNaN(bNum)) {
+                            return dir === 'asc' ? aNum - bNum : bNum - aNum;
+                        }
+                        return dir === 'asc'
+                            ? aText.localeCompare(bText)
+                            : bText.localeCompare(aText);
                     });
+
+                    const fragment = document.createDocumentFragment();
+                    rows.forEach(row => fragment.appendChild(row));
+                    tbody.appendChild(fragment);
                 });
             });
         });
+
+        // Auto-hide flash messages
+        setTimeout(function () {
+            document.querySelectorAll('.alert').forEach(function(alert) {
+                alert.style.transition = 'opacity 0.5s';
+                alert.style.opacity = '0';
+                setTimeout(function() {
+                    alert.style.display = 'none';
+                }, 500);
+            });
+        }, 3000);
+    });
 
     function tableFilter(tableId, colIndices) {
         const input = document.getElementById('filter').value.toLowerCase();

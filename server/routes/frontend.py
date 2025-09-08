@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from flask import render_template, Blueprint, request
+from flask import render_template, Blueprint, request, flash, redirect, url_for
 from util import generate_random_string
 from sqlalchemy import or_
 
@@ -10,8 +10,8 @@ from models.container import Container
 
 frontend = Blueprint('frontend', __name__)
 
-HOST_NO_FOUND = "Host not found", 404
-CONTAINER_NO_FOUND = "Container not found", 404
+HOST_NO_FOUND = "Host not found"
+CONTAINER_NO_FOUND = "Container not found"
 
 @dataclass
 class TrivyFindings:
@@ -105,16 +105,6 @@ def transform_xeol_findings_for_display(image):
     all_findings.sort(key=lambda x: x['EolDate'])
     return all_findings
 
-def render_message(header, classification, content, redirect):
-    return render_template('/util/message.html',
-                           msg={
-                               'header' : header,
-                               'type': classification,
-                               'content': content,
-                               'redirect': redirect
-                           })
-
-
 ######### Routes #########
 
 ### Hosts ###
@@ -148,7 +138,8 @@ def get_hosts():
 def get_host(host_id):
     host = Host.query.get(host_id)
     if not host:
-        return HOST_NO_FOUND
+        flash(HOST_NO_FOUND, 'error')
+        return redirect(url_for('frontend.add_host'))
     data = {
         'host': {
             'id': host.id,
@@ -183,7 +174,8 @@ def save_host():
 
     existing = Host.query.filter(or_(Host.name == name, Host.address == address)).first()
     if existing is not None:
-        return render_message('Hosts', 'error', 'Host with this name or address does already exist!', '/hosts/add')
+        flash('Host with this name or address does already exist!', 'error')
+        return redirect(url_for('frontend.add_host'))
 
     # generate token if not provided
     if token is None or token.strip() == '':
@@ -194,13 +186,16 @@ def save_host():
 
     host = Host(name=name, address=address, enabled=enable, token=token)
     host.save()
-    return  render_message('Hosts', 'success', 'Host successfully added!', '/hosts')
+
+    flash('Host successfully added!', 'success')
+    return redirect(url_for('frontend.get_hosts'))
 
 @frontend.route('/hosts/update/<int:host_id>', methods=['POST'])
 def update_host(host_id):
     host = Host.query.filter(Host.id == host_id).first()
     if not host:
-        return HOST_NO_FOUND
+        flash(HOST_NO_FOUND, 'error')
+        return redirect(url_for('frontend.get_hosts'))
 
     host.name = request.form['name']
     host.address = request.form['address']
@@ -208,13 +203,15 @@ def update_host(host_id):
     host.enabled = 1 if 'enabled' in request.form else 0
     host.save()
 
-    return render_message('Hosts', 'success', 'Host successfully updated!', '/hosts')
+    flash('Host successfully updated!', 'success')
+    return redirect(url_for('frontend.get_hosts'))
 
 @frontend.route('/hosts/edit/<int:host_id>', methods=['GET'])
 def edit_host(host_id):
     host = Host.query.filter(Host.id == host_id).first()
     if not host:
-        return HOST_NO_FOUND
+        flash(HOST_NO_FOUND, 'error')
+        return redirect(url_for('frontend.get_hosts'))
 
     data = {
         'id': host.id,
@@ -230,11 +227,13 @@ def edit_host(host_id):
 def delete_host(host_id):
     host = Host.query.filter(Host.id == host_id).first()
     if not host:
-        return HOST_NO_FOUND
+        flash(HOST_NO_FOUND, 'error')
+        return redirect(url_for('frontend.get_hosts'))
 
     host.delete()
 
-    return render_message('Hosts', 'success', 'Host successfully deleted!', '/hosts')
+    flash('Host successfully deleted!', 'success')
+    return redirect(url_for('frontend.get_hosts'))
 
 ### Images ###
 @frontend.route('/images', methods=['GET'])
