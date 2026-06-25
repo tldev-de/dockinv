@@ -12,6 +12,7 @@ frontend = Blueprint('frontend', __name__)
 
 HOST_NO_FOUND = "Host not found"
 CONTAINER_NO_FOUND = "Container not found"
+IMAGE_NOT_FOUND = "Image not found"
 
 @dataclass
 class TrivyFindings:
@@ -92,7 +93,7 @@ def transform_xeol_findings_for_display(image):
 
     all_findings = []
     status_xeol = image.status_xeol
-    matches = status_xeol['matches']
+    matches = status_xeol.get('matches', [])
     for match in matches:
         if "Cycle" in match:
             all_findings.append({
@@ -170,7 +171,7 @@ def save_host():
     name = request.form['name']
     address = request.form['address']
     token = request.form['token']
-    enable = 1 if 'enable' in request.form else 0
+    enable = 1 if 'enabled' in request.form else 0
 
     existing = Host.query.filter(or_(Host.name == name, Host.address == address)).first()
     if existing is not None:
@@ -223,7 +224,7 @@ def edit_host(host_id):
 
     return render_template('hosts/edit.html', host=data)
 
-@frontend.route('/hosts/delete/<int:host_id>', methods=['GET'])
+@frontend.route('/hosts/delete/<int:host_id>', methods=['POST'])
 def delete_host(host_id):
     host = Host.query.filter(Host.id == host_id).first()
     if not host:
@@ -262,7 +263,8 @@ def get_images():
 def get_image_details(image_id):
     image = Image.query.filter(Image.id == image_id).first()
     if not image:
-        return CONTAINER_NO_FOUND
+        flash(IMAGE_NOT_FOUND, 'error')
+        return redirect(url_for('frontend.get_images'))
 
     image_data = {
         'id': image.id,
@@ -292,7 +294,8 @@ def get_image_details(image_id):
 def get_container_details(container_id):
     container = Container.query.filter(Container.id == container_id).first()
     if not container:
-        return CONTAINER_NO_FOUND
+        flash(CONTAINER_NO_FOUND, 'error')
+        return redirect(url_for('frontend.get_hosts'))
 
     container_data = {
         'id': container.id,

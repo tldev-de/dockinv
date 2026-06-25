@@ -38,9 +38,11 @@
                     {% endif %}
                 </td>
                 <td>
+                    {% if container.trivy_findings %}
                     <span class="text-error">{{ container.trivy_findings['high'] }}</span> |
                     <span class="text-warning">{{ container.trivy_findings['medium'] }}</span> |
                     <span class="text-info">{{ container.trivy_findings['low'] }}</span>
+                    {% endif %}
                 </td>
             </tr>
         {% endfor %}
