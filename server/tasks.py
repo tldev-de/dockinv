@@ -19,11 +19,13 @@ logger = get_task_logger(__name__)
 
 class ContextTask(celery.Task):
     abstract = True
+    _app = None
 
     def __call__(self, *args, **kwargs):
-
-        from app import create_app
-        with create_app(Config).app_context():
+        if self.__class__._app is None:
+            from app import create_app
+            self.__class__._app = create_app(Config)
+        with self.__class__._app.app_context():
             return super(ContextTask, self).__call__(*args, **kwargs)
 
 
@@ -34,17 +36,17 @@ celery.Task = ContextTask
 def setup_periodic_tasks(**kwargs):
     celery.add_periodic_task(
         name='trivy_background_task',
-        schedule=int(Config.TASK_TRIVY_INTERVAL) * 60,
+        schedule=Config.TASK_TRIVY_INTERVAL * 60,
         sig=celery.signature('tasks.trivy_background_task')
     )
     celery.add_periodic_task(
         name='xeol_background_task',
-        schedule=int(Config.TASK_XEOL_INTERVAL) * 60,
+        schedule=Config.TASK_XEOL_INTERVAL * 60,
         sig=celery.signature('tasks.xeol_background_task')
     )
     celery.add_periodic_task(
         name='data_collector_background_task',
-        schedule=int(Config.TASK_DATA_COLLECTOR_INTERVAL) * 60,
+        schedule=Config.TASK_DATA_COLLECTOR_INTERVAL * 60,
         sig=celery.signature('tasks.data_collector_background_task')
     )
 
@@ -79,7 +81,7 @@ def trivy_background_task():
 def xeol_background_task():
     logger.info(f'Task xeol started at {datetime.now().strftime("%X")}')
     images = (Image.query
-              .filter(Image.repo_digest != None)  # noqa
+              .filter(Image.repo_digest != null())
               .filter(Image.containers.any())  # Only consider images with containers
               .filter(
         or_(Image.updated_at < (datetime.now(tz=timezone.utc) - timedelta(hours=24)), Image.status_xeol == null()))
@@ -106,29 +108,40 @@ def data_collector_background_task():
     logger.info(f'Task data started at {datetime.now().strftime("%X")}')
     hosts = Host.query.all()
     for host in hosts:
-        # todo: try catch block per host
-        logger.info(f'current Host: {host.name}')
-        # http call address of host
-        r = requests.get(host.address + 'containers', headers={'Authorization': host.token})
-        r.raise_for_status()
-        data = r.json()
-        logger.debug(f'host output: {data}')
-        for c in data:
-            # create containers + images
-            image = Image.query.filter_by(repo_digest=c['repo_digest']).first()
-            if image is None:
-                image = Image(repo_digest=c['repo_digest'], name=c['image_name'])
-                image.save()
-            container = Container.query.filter_by(name=c['name']).first()
-            if container is None:
-                container = Container(host_id=host.id, name=c['name'],
-                                      image_string=c['image_name'] + ':' + c['image_tag'],
-                                      image_id=image.id, status=c['status'],
-                                      started_at=datetime.fromisoformat(c['started_at']))
-            else:
-                container.image_string = c['image_name'] + ':' + c['image_tag']
-                container.status = c['status']
-                container.started_at = datetime.fromisoformat(c['started_at'])
-            container.save()
-            # todo: clear old images
+        try:
+            logger.info(f'current Host: {host.name}')
+            r = requests.get(host.address + 'containers', headers={'Authorization': host.token})
+            r.raise_for_status()
+            data = r.json()
+            logger.debug(f'host output: {data}')
+
+            reported_names = set()
+            for c in data:
+                reported_names.add(c['name'])
+                image = Image.query.filter_by(repo_digest=c['repo_digest']).first()
+                if image is None:
+                    image = Image(repo_digest=c['repo_digest'], name=c['image_name'])
+                    image.save()
+                container = Container.query.filter_by(name=c['name'], host_id=host.id).first()
+                if container is None:
+                    container = Container(host_id=host.id, name=c['name'],
+                                          image_string=c['image_name'] + ':' + c['image_tag'],
+                                          image_id=image.id, status=c['status'],
+                                          started_at=datetime.fromisoformat(c['started_at']))
+                else:
+                    container.image_string = c['image_name'] + ':' + c['image_tag']
+                    container.status = c['status']
+                    container.started_at = datetime.fromisoformat(c['started_at'])
+                container.save()
+
+            # Remove containers that are no longer running on this host
+            for stale in Container.query.filter_by(host_id=host.id).all():
+                if stale.name not in reported_names:
+                    logger.info(f'Removing stale container {stale.name} from host {host.name}')
+                    stale.delete()
+
+        except Exception as e:
+            logger.error(f'Error processing host {host.name}: {e}')
+            continue
+
     logger.info(f'Task data completed at {datetime.now().strftime("%X")}')
