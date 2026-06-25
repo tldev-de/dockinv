@@ -1,12 +1,11 @@
 # Stage 1: Compile Tailwind CSS + DaisyUI
-FROM node:20-alpine AS css-builder
+FROM node:24.18.0-alpine AS css-builder
 WORKDIR /build
 COPY package.json package-lock.json ./
 COPY static/css/input.css ./static/css/input.css
 COPY templates/ ./templates/
-COPY tailwind.config.js ./
 RUN npm ci && \
-    npx tailwindcss -i ./static/css/input.css -o ./static/css/theme.css --minify
+    ./node_modules/.bin/tailwindcss -i ./static/css/input.css -o ./static/css/theme.css --minify
 
 # Stage 2: Runtime image
 FROM python:3.13-alpine
