@@ -18,6 +18,7 @@ services:
       - redis
     environment:
       - DATABASE_AUTO_UPGRADE=1
+      - SECRET_KEY=change_me_to_a_random_secret
     volumes:
         - data:/data
 
@@ -39,6 +40,7 @@ services:
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - SECRET_KEY=change_me_to_a_random_secret
 
   redis:
     image: redis:7-alpine

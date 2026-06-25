@@ -26,6 +26,7 @@ services:
     environment:
       - DATABASE_AUTO_UPGRADE=1
       - HOSTS_ADD_DEV_AGENT=1
+      - SECRET_KEY=dev_secret_not_for_production
     volumes:
         - ./data:/data
         - ./server:/app
@@ -48,6 +49,7 @@ services:
       - TASK_DATA_COLLECTOR_INTERVAL=1
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - SECRET_KEY=dev_secret_not_for_production
     depends_on:
       - redis
     volumes:
