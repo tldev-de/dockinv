@@ -138,10 +138,10 @@ def get_hosts():
 
 @frontend.route('/hosts/<int:host_id>', methods=['GET'])
 def get_host(host_id):
-    host = Host.query.get(host_id)
+    host = Host.query.filter(Host.id == host_id).first()
     if not host:
         flash(HOST_NO_FOUND, 'error')
-        return redirect(url_for('frontend.add_host'))
+        return redirect(url_for(HOSTS_ROUTE))
     data = {
         'host': {
             'id': host.id,
@@ -199,8 +199,11 @@ def update_host(host_id):
         flash(HOST_NO_FOUND, 'error')
         return redirect(url_for(HOSTS_ROUTE))
 
+    address = request.form['address']
+    if address[-1] != '/':
+        address += '/'
     host.name = request.form['name']
-    host.address = request.form['address']
+    host.address = address
     host.token = request.form['token']
     host.enabled = 1 if 'enabled' in request.form else 0
     host.save()
