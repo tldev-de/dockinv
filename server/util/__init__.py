@@ -22,10 +22,10 @@ def parse_xeol_to_str(status_xeol) -> str:
     matches = status_xeol.get("matches", [])
     for match in matches:
         if "Eol" in match["Cycle"]:
-            productName = match["Cycle"]["ProductName"]
-            releaseCycle = match["Cycle"]["ReleaseCycle"]
-            eolDate = match["Cycle"]["Eol"]
-            results.append(f"{productName} {releaseCycle} (EOL {eolDate})")
+            product_name = match["Cycle"]["ProductName"]
+            release_cycle = match["Cycle"]["ReleaseCycle"]
+            eol_date = match["Cycle"]["Eol"]
+            results.append(f"{product_name} {release_cycle} (EOL {eol_date})")
 
     if results:
         return "\n".join(results)
