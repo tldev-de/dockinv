@@ -1,0 +1,140 @@
+{%  extends 'base.html.j2' %}
+
+{% block page %}Image details{% endblock %}
+
+{% block body %}
+<div class="flex flex-col mb-10" id="summary">
+    <div class="font-bold text-2xl mb-2">
+        {{ image_data.name }}
+    </div>
+    <div>
+        <span class="font-bold">Repo Digest : </span>
+        {{ image_data.repo_digest }}
+    </div>
+    <div>
+        <span class="font-bold">EOL : </span>
+        {% if image_data.is_eol == True %}
+            Yes
+        {% elif image_data.is_eol == False %}
+            No
+        {% endif %}
+    </div>
+</div>
+<!-- container using image -->
+<span class="font-bold">
+    Container running this image
+</span>
+<div class="overflow-x-auto max-h-[32rem] mb-10">
+    <table class="table table-zebra table-pin-rows table-pin-cols" id="container" >
+          <thead>
+            <tr>
+                <th>Id</th>
+                      <th>Host</th>
+                <th>Stack</th>
+                <th>Container</th>
+                <th>Image</th>
+                <th>Status</th>
+                <th>Portainer</th>
+            </tr>
+          </thead>
+         <tbody>
+         {% for container in container_data %}
+            <tr>
+                <td>{{ container.id }}</td>
+                <td>{{ container.host }}</td>
+                <td>-</td>
+                <td>
+                    <a href="/container/{{ container.id }}" class="underline"> {{ container.name }} </a>
+                </td>
+                <td>{{ container.image }}</td>
+                <td>{{ container.status }}</td>
+                <td>
+                    <a href="/container/{{ container.id }}" target="_blank">
+                       <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                       </svg>
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<!-- list of trivy findings -->
+<span class="font-bold">
+    Trivy Findings
+</span>
+<div class="overflow-x-auto max-h-[32rem] mb-10">
+    <table class="table table-zebra table-pin-rows table-pin-cols" id="trivyList">
+    <thead>
+        <tr>
+            <th>Importance</th>
+            <th>Package</th>
+            <th>Vulnerability</th>
+            <th>Status</th>
+            <th>Versions</th>
+            <th>Publishing date</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% if trivy_findings != None %}
+        {% for finding in trivy_findings %}
+            <tr>
+                <td style="
+                    {% if finding.Severity == 'CRITICAL' %}color: #b71c1c
+                    {% elif finding.Severity == 'HIGH' %}color: #e65100
+                    {% elif finding.Severity == 'MEDIUM' %}color: #fbc02d
+                    {% elif finding.Severity == 'LOW' %}color: #388e3c
+                    {% else %}color: #757575
+                    {% endif %}">
+                        {{ finding.Severity }}
+                </td>
+                <td> {{ finding.PkgName }} </td>
+                <td> <a target="_blank" href="{{ finding.PrimaryURL }}" class="underline"> {{ finding.VulnerabilityID }} </a></td>
+                <td> {{ finding.Status }} </td>
+                <td>
+                    <div><span class="font-bold">Installed: </span> {{ finding.InstalledVersion }}</div>
+                    {% if finding.FixedVersion %}
+                    <div><span class="font-bold">Fixed in: </span>{{ finding.FixedVersion }}</div>
+                    {% endif %}
+                </td>
+                <td>
+                    {{ finding.PublishedDate }}
+                </td>
+            </tr>
+        {% endfor %}
+    {% endif %}
+    </tbody>
+</table>
+</div>
+
+
+<!-- list of xeol findings -->
+<span class="font-bold">
+    XEol Findings
+</span>
+<div class="overflow-x-auto max-h-[32rem]">
+    <table class="table table-zebra table-pin-rows table-pin-cols" id="xeolList">
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Version</th>
+                <th>Release date</th>
+                <th>EOL date</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% if xeol_findings != None %}
+            {% for finding in xeol_findings %}
+                <tr>
+                    <td> {{ finding.Name }} </td>
+                    <td> {{ finding.Version }} </td>
+                    <td> {{ finding.ReleaseDate }} </td>
+                    <td> {{ finding.EolDate }} </td>
+                </tr>
+             {% endfor %}
+        {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

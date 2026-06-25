@@ -1,3 +1,6 @@
+import random
+import string
+
 from flask import Flask
 
 from config import Config
@@ -9,6 +12,7 @@ from routes.frontend import frontend
 def create_app(config_object=Config):
     app = Flask(__name__)
     app.config.from_object(config_object)
+    app.secret_key = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(32))
 
     register_blueprints(app)
     register_extensions(app)
