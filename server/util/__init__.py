@@ -1,7 +1,8 @@
+import secrets
+import string
+
 from tabulate import tabulate
 from extensions import db
-import random
-import string
 
 
 def render_table(model: db.Model, obj: list) -> str:
@@ -11,8 +12,8 @@ def render_table(model: db.Model, obj: list) -> str:
 
 
 def generate_random_string(length: int) -> str:
-    res = ''.join(random.choices(string.ascii_uppercase + string.digits + string.ascii_lowercase, k=length))
-    return res
+    alphabet = string.ascii_letters + string.digits
+    return ''.join(secrets.choice(alphabet) for _ in range(length))
 
 
 def parse_xeol_to_str(status_xeol) -> str:
