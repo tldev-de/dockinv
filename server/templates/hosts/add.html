@@ -4,6 +4,7 @@
 
 {% block body %}
 <form class="form-control max-w-96" method="post" action="/hosts/save">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
     <div class="mb-4">
         <label for="name" class="label">
             Name

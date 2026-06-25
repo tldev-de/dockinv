@@ -1,10 +1,11 @@
-import random
-import string
+import os
+import secrets
+import warnings
 
 from flask import Flask
 
 from config import Config
-from extensions import db, migrate
+from extensions import db, migrate, csrf
 from routes.general import general
 from routes.frontend import frontend
 
@@ -12,7 +13,16 @@ from routes.frontend import frontend
 def create_app(config_object=Config):
     app = Flask(__name__)
     app.config.from_object(config_object)
-    app.secret_key = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(32))
+
+    secret_key = os.environ.get('SECRET_KEY')
+    if not secret_key:
+        secret_key = secrets.token_hex(32)
+        warnings.warn(
+            "SECRET_KEY environment variable not set. Sessions are not shared between "
+            "workers and will be invalidated on every restart.",
+            stacklevel=2,
+        )
+    app.secret_key = secret_key
 
     register_blueprints(app)
     register_extensions(app)
@@ -23,6 +33,7 @@ def create_app(config_object=Config):
 def register_extensions(app):
     db.init_app(app)
     migrate.init_app(app, db)
+    csrf.init_app(app)
     return None
 
 
@@ -45,5 +56,5 @@ def register_commands(app: Flask):
 
 
 if __name__ == '__main__':
-    create_app = create_app()
-    create_app.run(host="127.0.0.1", port=8000)
+    app = create_app()
+    app.run(host="127.0.0.1", port=8000)

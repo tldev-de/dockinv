@@ -4,6 +4,7 @@
 
 {% block body %}
 <form class="form-control max-w-96" method="post" action="/hosts/update/{{ host.id }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
     <div class="mb-4">
         <label for="name" class="label">
             Name
@@ -32,6 +33,7 @@
         <div>
             <button type="submit" class="btn btn-sm btn-primary max-w-md mx-auto my-4">save</button>
             <form method="post" action="/hosts/delete/{{ host.id }}" style="display:inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <button type="submit" class="btn btn-sm btn-error max-w-md mx-auto my-4">delete</button>
             </form>
         </div>
