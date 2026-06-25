@@ -1,3 +1,4 @@
+import hmac
 import os
 import docker
 from flask import Flask, request, jsonify
@@ -12,8 +13,8 @@ HTTP_PORT = os.getenv('HTTP_PORT', 9999)
 @app.route('/containers', methods=['GET'])
 def get_docker_containers():
     if HTTP_TOKEN:
-        token = request.headers.get('Authorization')
-        if token != HTTP_TOKEN:
+        token = request.headers.get('Authorization', '')
+        if not hmac.compare_digest(token, HTTP_TOKEN):
             return '403 forbidden', 403  # Forbidden
 
     try:
