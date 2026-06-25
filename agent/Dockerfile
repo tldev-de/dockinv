@@ -5,7 +5,8 @@ RUN apk add --no-cache curl
 
 # Create a working directory and copy files
 WORKDIR /app
-COPY * .
+COPY requirements.txt .
+COPY agent.py .
 
 # this container must run as root to access the docker socket
 
