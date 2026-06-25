@@ -23,7 +23,7 @@ services:
 
   worker:
     image: tldevde/dockinv-server:latest
-    command: celery -A tasks worker -l info -B
+    command: celery -A tasks worker -l info -B -s /data/celerybeat-schedule
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "celery -A tasks inspect ping -d celery@$$HOSTNAME"]
