@@ -64,7 +64,7 @@
 {{ super() }}
 <script>
     function openHost(id) {
-        window.location.href = "/hosts/" + id;
+        globalThis.location.href = "/hosts/" + id;
     }
 </script>
 {% endblock %}

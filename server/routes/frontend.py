@@ -13,6 +13,7 @@ frontend = Blueprint('frontend', __name__)
 HOST_NO_FOUND = "Host not found"
 CONTAINER_NO_FOUND = "Container not found"
 IMAGE_NOT_FOUND = "Image not found"
+HOSTS_ROUTE = 'frontend.get_hosts'
 
 @dataclass
 class TrivyFindings:
@@ -189,14 +190,14 @@ def save_host():
     host.save()
 
     flash('Host successfully added!', 'success')
-    return redirect(url_for('frontend.get_hosts'))
+    return redirect(url_for(HOSTS_ROUTE))
 
 @frontend.route('/hosts/update/<int:host_id>', methods=['POST'])
 def update_host(host_id):
     host = Host.query.filter(Host.id == host_id).first()
     if not host:
         flash(HOST_NO_FOUND, 'error')
-        return redirect(url_for('frontend.get_hosts'))
+        return redirect(url_for(HOSTS_ROUTE))
 
     host.name = request.form['name']
     host.address = request.form['address']
@@ -205,14 +206,14 @@ def update_host(host_id):
     host.save()
 
     flash('Host successfully updated!', 'success')
-    return redirect(url_for('frontend.get_hosts'))
+    return redirect(url_for(HOSTS_ROUTE))
 
 @frontend.route('/hosts/edit/<int:host_id>', methods=['GET'])
 def edit_host(host_id):
     host = Host.query.filter(Host.id == host_id).first()
     if not host:
         flash(HOST_NO_FOUND, 'error')
-        return redirect(url_for('frontend.get_hosts'))
+        return redirect(url_for(HOSTS_ROUTE))
 
     data = {
         'id': host.id,
@@ -229,12 +230,12 @@ def delete_host(host_id):
     host = Host.query.filter(Host.id == host_id).first()
     if not host:
         flash(HOST_NO_FOUND, 'error')
-        return redirect(url_for('frontend.get_hosts'))
+        return redirect(url_for(HOSTS_ROUTE))
 
     host.delete()
 
     flash('Host successfully deleted!', 'success')
-    return redirect(url_for('frontend.get_hosts'))
+    return redirect(url_for(HOSTS_ROUTE))
 
 ### Images ###
 @frontend.route('/images', methods=['GET'])
@@ -284,7 +285,6 @@ def get_image_details(image_id):
             'image': container.image_string,
             'host': container.host.name,
             'status': container.status
-            #TODO get container id like "1dddca8476a57d83305787bf5f45d071fe5b143752d416389b25ccd4eda8c6a8" for link to host
         })
 
     return render_template('images/details.html', container_data=container_data, image_data=image_data, trivy_findings=trivy_findings, xeol_findings=xeol_findings)
@@ -295,7 +295,7 @@ def get_container_details(container_id):
     container = Container.query.filter(Container.id == container_id).first()
     if not container:
         flash(CONTAINER_NO_FOUND, 'error')
-        return redirect(url_for('frontend.get_hosts'))
+        return redirect(url_for(HOSTS_ROUTE))
 
     container_data = {
         'id': container.id,
