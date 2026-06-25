@@ -1,9 +1,15 @@
 {%  extends 'base.html.j2' %}
 
-{% block page %}Images{% endblock %}
+{% block page %}
+    Images
+{% endblock %}
+
+{% block search %}
+    'imagesTable', [0]
+{% endblock %}
 
 {% block body %}
-<table class="table table-zebra">
+<table class="table table-zebra" id="imagesTable">
     <thead>
     <tr>
         <th>Image Name</th>
@@ -25,8 +31,8 @@
         <td>
             {% if image.is_eol == True %}
             <span class="text-error">EOL</span>
-            {% elif image.is_eol == None %}
-            <span class="text-success">NOT EOL</span>
+            {% elif image.is_eol == False %}
+            <span class="text-success">OK</span>
             {% endif %}
         </td>
         <td>
@@ -44,9 +50,11 @@
 {% endblock %}
 
 {% block scripts %}
+{{ super() }}
 <script>
     function openImage(id) {
-        window.location.href = "/images/" + id;
+        globalThis.location.href = "/images/" + id;
     }
+
 </script>
 {% endblock %}

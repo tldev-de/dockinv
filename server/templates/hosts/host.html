@@ -1,0 +1,60 @@
+{%  extends 'base.html.j2' %}
+
+{% block page %}
+    {{ data.host.name }}
+{% endblock %}
+
+{% block search %}
+    'containerTable', [0,1]
+{% endblock %}
+
+{% block body %}
+
+<table class="table table-zebra table-fixed" id="containerTable">
+    <thead>
+    <tr>
+        <th class="w-1/4">Container Name</th>
+        <th class="w-2/4">Image Name / Tag</th>
+        <th class="w-1/8">Result of Xeol</th>
+        <th class="w-1/8">Result of Trivy</th>
+    </tr>
+    </thead>
+    <tbody>
+        {% for container in data.containers %}
+            <tr class="hover" onclick="openHost('{{ container.id }}')" onkeydown="if(event.key==='Enter')openHost('{{ container.id }}')" tabindex="0">
+                <td>{{ container.name }}</td>
+                <td>
+                    <div class="tooltip" data-tip="{{ container.image_hash }}">
+                        <a class="underline" href="/images/{{ container.image_id }}">
+                            {{ container.image }}
+                        </a>
+                    </div>
+                </td>
+                <td>
+                    {% if container.image_eol %}
+                        <span class="text-error">EOL</span>
+                    {% else %}
+                        <span class="text-success"></span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if container.trivy_findings %}
+                    <span class="text-error">{{ container.trivy_findings['high'] }}</span> |
+                    <span class="text-warning">{{ container.trivy_findings['medium'] }}</span> |
+                    <span class="text-info">{{ container.trivy_findings['low'] }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    function openHost(id) {
+        globalThis.location.href = '/container/' + id;
+    }
+</script>
+{% endblock %}
