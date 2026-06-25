@@ -47,6 +47,7 @@ def edit(name: str, address: str, enabled: bool, token: str):
     existing = Host.query.filter(Host.name == name).first()
     if existing is None:
         print('Host with this address does not exist!')
+        return
     if address is not None:
         existing.address = address
     if enabled is not None:
