@@ -3,3 +3,6 @@
 data
 server/celerybeat-schedule
 /server/static/css/tailwindcss
+/server/static/css/theme.css
+/server/node_modules/
+
