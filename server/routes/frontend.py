@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from flask import render_template, Blueprint, request, flash, redirect, url_for
 from util import generate_random_string
 from sqlalchemy import or_
+from sqlalchemy.orm import selectinload
 
 from models.host import Host
 from models.image import Image
@@ -32,11 +33,10 @@ def count_eol_images(host):
     return len(eol_images_set)
 
 def is_image_eol(image):
-    if not image.status_xeol:
+    if not image or not image.status_xeol:
         return None
-    status_xeol = image.status_xeol
-    matches = status_xeol.get("matches", [])
-    return any("Eol" in match["Cycle"] for match in matches)
+    matches = image.status_xeol.get("matches", [])
+    return any("Eol" in match.get("Cycle", {}) for match in matches)
 
 
 
@@ -112,7 +112,9 @@ def transform_xeol_findings_for_display(image):
 ### Hosts ###
 @frontend.route('/hosts', methods=['GET'])
 def get_hosts():
-    hosts = Host.query.all()
+    hosts = Host.query.options(
+        selectinload(Host.containers).selectinload(Container.image)
+    ).all()
 
     data = []
     for host in hosts:
@@ -172,17 +174,19 @@ def save_host():
     name = request.form['name']
     address = request.form['address']
     token = request.form['token']
-    enable = 1 if 'enabled' in request.form else 0
+    enable = 'enabled' in request.form
+
+    if not address:
+        flash('Address is required.', 'error')
+        return redirect(url_for('frontend.add_host'))
 
     existing = Host.query.filter(or_(Host.name == name, Host.address == address)).first()
     if existing is not None:
         flash('Host with this name or address does already exist!', 'error')
         return redirect(url_for('frontend.add_host'))
 
-    # generate token if not provided
-    if token is None or token.strip() == '':
+    if not token or token.strip() == '':
         token = generate_random_string(32)
-    # add trailing slash to address if not present
     if address[-1] != '/':
         address += '/'
 
@@ -200,12 +204,18 @@ def update_host(host_id):
         return redirect(url_for(HOSTS_ROUTE))
 
     address = request.form['address']
+    if not address:
+        flash('Address is required.', 'error')
+        return redirect(url_for(HOSTS_ROUTE))
     if address[-1] != '/':
         address += '/'
+    token = request.form.get('token', '').strip()
+    if not token:
+        token = generate_random_string(32)
     host.name = request.form['name']
     host.address = address
-    host.token = request.form['token']
-    host.enabled = 1 if 'enabled' in request.form else 0
+    host.token = token
+    host.enabled = 'enabled' in request.form
     host.save()
 
     flash('Host successfully updated!', 'success')
@@ -279,7 +289,7 @@ def get_image_details(image_id):
     trivy_findings = transform_trivy_findings_for_display(image)
     xeol_findings = transform_xeol_findings_for_display(image)
 
-    containers = Container.query.filter(Container.image_id == image_id)
+    containers = Container.query.filter(Container.image_id == image_id).all()
     container_data = []
     for container in containers:
         container_data.append({
