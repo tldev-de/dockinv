@@ -16,5 +16,5 @@ class Container(db.Model, BaseModel):
     image = db.relationship('Image', backref=db.backref('containers', lazy=True))
     status: str = db.Column(db.String(20), nullable=False)
     started_at: datetime = db.Column(db.DateTime, nullable=False)
-    created_at: datetime = db.Column(db.DateTime, default=datetime.now(timezone.utc))
-    updated_at: datetime = db.Column(db.DateTime, nullable=True, onupdate=datetime.now(timezone.utc))
+    created_at: datetime = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = db.Column(db.DateTime, nullable=True, onupdate=lambda: datetime.now(timezone.utc))
