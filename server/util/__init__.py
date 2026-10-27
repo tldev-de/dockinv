@@ -37,14 +37,16 @@ def parse_trivy_to_str(status_trivy) -> str:
     if not status_trivy:
         return "n/a"
 
-    severity_count = {"HIGH": 0, "MEDIUM": 0, "LOW": 0}
+    severity_count = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}
     for result in status_trivy.get("Results", []):
         for vulnerability in result.get("Vulnerabilities", []):
             severity = vulnerability.get("Severity")
             if severity in severity_count:
                 severity_count[severity] += 1
 
-    high, medium, low = severity_count["HIGH"], severity_count["MEDIUM"], severity_count["LOW"]
+    # CRITICAL is folded into "High" to match the web view (count_trivy_findings_image).
+    high = severity_count["CRITICAL"] + severity_count["HIGH"]
+    medium, low = severity_count["MEDIUM"], severity_count["LOW"]
     if high + medium + low > 0:
         return f"High: {high}, Medium: {medium}, Low: {low}"
     return "OK"

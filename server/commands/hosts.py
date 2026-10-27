@@ -16,7 +16,7 @@ def hosts():
 @hosts.command(aliases=['create', 'new'])
 @click.argument('name')
 @click.option('-a', '--address', prompt=True, default=None)
-@click.option('-e', '--enabled', prompt=False, default=True)
+@click.option('-e', '--enabled', prompt=False, default=True, type=bool)
 @click.option('-t', '--token', prompt=False, default=None)
 @with_appcontext
 def add(name: str, address: str, enabled: bool, token: str):
@@ -39,7 +39,7 @@ def add(name: str, address: str, enabled: bool, token: str):
 @hosts.command(aliases=['change'])
 @click.argument('name')
 @click.option('-a', '--address', prompt=False, default=None)
-@click.option('-e', '--enabled', prompt=False, default=None)
+@click.option('-e', '--enabled', prompt=False, default=None, type=bool)
 @click.option('-t', '--token', prompt=False, default=None)
 @with_appcontext
 def edit(name: str, address: str, enabled: bool, token: str):
