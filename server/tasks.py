@@ -120,7 +120,13 @@ def data_collector_background_task():
             reported_names = set()
             for c in data:
                 reported_names.add(c['name'])
-                image = Image.query.filter_by(repo_digest=c['repo_digest']).first()
+                # Match images by repo_digest. Images without a digest (e.g. locally
+                # built) are grouped per image name so they don't all collapse into a
+                # single digest-less row and mis-associate unrelated containers.
+                if c['repo_digest'] is not None:
+                    image = Image.query.filter_by(repo_digest=c['repo_digest']).first()
+                else:
+                    image = Image.query.filter_by(repo_digest=None, name=c['image_name']).first()
                 if image is None:
                     image = Image(repo_digest=c['repo_digest'], name=c['image_name'])
                     image.save()
@@ -135,6 +141,9 @@ def data_collector_background_task():
                                           started_at=datetime.fromisoformat(c['started_at']))
                 else:
                     container.image_string = c['image_name'] + ':' + c['image_tag']
+                    # A container recreated under the same name may now run a different
+                    # image, so keep the image association in sync.
+                    container.image_id = image.id
                     container.status = c['status']
                     container.started_at = datetime.fromisoformat(c['started_at'])
                 container.save()
