@@ -4,7 +4,7 @@ WORKDIR /build
 COPY package.json package-lock.json ./
 COPY static/css/input.css ./static/css/input.css
 COPY templates/ ./templates/
-RUN npm ci && \
+RUN npm ci --ignore-scripts && \
     ./node_modules/.bin/tailwindcss -i ./static/css/input.css -o ./static/css/theme.css --minify
 
 # Stage 2: Runtime image
