@@ -22,7 +22,8 @@ ENV HTTP_PORT=9999
 EXPOSE ${HTTP_PORT}
 
 # Healthcheck
-HEALTHCHECK --interval=10s --timeout=5s --retries=3 --start-period=10s CMD curl -f "http://localhost:${HTTP_PORT}/health" || exit
+HEALTHCHECK --interval=10s --timeout=5s --retries=3 --start-period=10s CMD curl -f "http://localhost:${HTTP_PORT}/health" || exit 1
 
-# Run the application
-CMD ["python", "agent.py"]
+# Run the application via a production WSGI server (gunicorn).
+# Shell form so ${HTTP_PORT} is expanded at runtime.
+CMD gunicorn -b "0.0.0.0:${HTTP_PORT}" agent:app
