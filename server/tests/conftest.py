@@ -1,6 +1,6 @@
 """Shared pytest fixtures for the DockInv server test-suite.
 
-Two project-specific gotchas are handled here (see testing-plan.md §1):
+Two project-specific gotchas are handled here:
 
 1. ``Config.SQLALCHEMY_DATABASE_URI`` is evaluated at import time, so a test DB
    cannot be injected via ``monkeypatch.setenv``. We build a per-test config

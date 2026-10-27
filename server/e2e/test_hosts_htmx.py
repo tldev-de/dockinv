@@ -2,7 +2,11 @@
 
 
 def _csp(errors):
-    return [e for e in errors if "Content Security Policy" in e or "Refused to" in e]
+    # A genuine CSP violation always names the policy ("...Content Security Policy
+    # directive..."). We deliberately do NOT match a bare "Refused to", which also
+    # covers an unrelated strict-MIME rejection of theme.css — that file is a
+    # Tailwind build artifact (gitignored) and is simply absent in a bare checkout.
+    return [e for e in errors if "Content Security Policy" in e]
 
 
 def test_htmx_and_app_js_run_under_csp(page, live_server, console_errors):

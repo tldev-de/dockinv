@@ -50,6 +50,14 @@ def live_server(tmp_path_factory):
         thread.join(timeout=5)
 
 
+@pytest.fixture(scope="session")
+def browser_type_launch_args(browser_type_launch_args):
+    # GitHub's ubuntu-latest (24.04) AppArmor blocks Chromium's user-namespace
+    # sandbox, so the browser fails to launch without --no-sandbox. Harmless for
+    # these tests; required for CI.
+    return {**browser_type_launch_args, "args": ["--no-sandbox"]}
+
+
 @pytest.fixture
 def console_errors(page):
     """Collect browser console errors + uncaught page errors (incl. CSP violations)."""
