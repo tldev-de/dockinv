@@ -71,14 +71,19 @@ def trivy_background_task():
                 ['trivy', 'image', image.repo_digest, '--format', 'json'],
                 check=True,
                 capture_output=True,
-                text=True
+                text=True,
+                timeout=Config.TASK_SCAN_TIMEOUT,
             )
             # Single, atomic writer: stores the JSON and rebuilds the normalized
             # Vulnerability rows in one transaction so they never drift.
             from vulnerabilities import set_trivy_result
             set_trivy_result(image, json.loads(result.stdout))
+        except subprocess.TimeoutExpired:
+            logger.error(f"trivy timed out after {Config.TASK_SCAN_TIMEOUT}s for {image.repo_digest}")
         except subprocess.CalledProcessError as e:
             logger.error(f"Error running trivy: {e}: {e.stderr}")
+        except json.JSONDecodeError as e:
+            logger.error(f"trivy returned invalid JSON for {image.repo_digest}: {e}")
 
     logger.info(f'Task trivy completed at {datetime.now().strftime(format="%X")}')
 
@@ -100,12 +105,17 @@ def xeol_background_task():
                 ['xeol', f'{image.repo_digest}', '--output', 'json'],
                 check=True,
                 capture_output=True,
-                text=True
+                text=True,
+                timeout=Config.TASK_SCAN_TIMEOUT,
             )
             image.status_xeol = json.loads(result.stdout)
             image.save()
+        except subprocess.TimeoutExpired:
+            logger.error(f"xeol timed out after {Config.TASK_SCAN_TIMEOUT}s for {image.repo_digest}")
         except subprocess.CalledProcessError as e:
             logger.error(f"Error running xeol: {e}: {e.stderr}")
+        except json.JSONDecodeError as e:
+            logger.error(f"xeol returned invalid JSON for {image.repo_digest}: {e}")
 
     logger.info(f'Task xeol completed at {datetime.now().strftime(format="%X")}')
 

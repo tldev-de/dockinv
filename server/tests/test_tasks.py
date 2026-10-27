@@ -118,13 +118,15 @@ def test_disabled_host_not_polled(app, run_task):
 
 # --- §5 scanner tasks ------------------------------------------------------
 
-def _patch_subprocess(monkeypatch, stdout="{}", raise_called_process=False):
+def _patch_subprocess(monkeypatch, stdout="{}", raise_called_process=False, raise_timeout=False):
     calls = []
 
     def fake_run(cmd, **kwargs):
         calls.append(cmd)
         if raise_called_process:
             raise subprocess.CalledProcessError(1, cmd, stderr="boom")
+        if raise_timeout:
+            raise subprocess.TimeoutExpired(cmd, kwargs.get("timeout"))
         return subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr="")
 
     monkeypatch.setattr(tasks.subprocess, "run", fake_run)
@@ -206,3 +208,46 @@ def test_xeol_handles_called_process_error(app, run_task, monkeypatch):
     _patch_subprocess(monkeypatch, raise_called_process=True)
     run_task(tasks.xeol_background_task)  # must not raise
     assert Image.query.get(image.id).status_xeol is None
+
+
+def _image_to_scan(monkeypatch):
+    h = mk_host()
+    image = Image(name="nginx", repo_digest="nginx@sha256:aaa")
+    image.save()
+    mk_container(h, image)
+    return image
+
+
+def test_trivy_handles_timeout(app, run_task, monkeypatch):
+    image = _image_to_scan(monkeypatch)
+    _patch_subprocess(monkeypatch, raise_timeout=True)
+    run_task(tasks.trivy_background_task)  # must not raise / hang
+    assert Image.query.get(image.id).status_trivy is None
+
+
+def test_xeol_handles_timeout(app, run_task, monkeypatch):
+    image = _image_to_scan(monkeypatch)
+    _patch_subprocess(monkeypatch, raise_timeout=True)
+    run_task(tasks.xeol_background_task)
+    assert Image.query.get(image.id).status_xeol is None
+
+
+def test_trivy_handles_invalid_json(app, run_task, monkeypatch):
+    image = _image_to_scan(monkeypatch)
+    _patch_subprocess(monkeypatch, stdout="not valid json")
+    run_task(tasks.trivy_background_task)  # JSONDecodeError must be caught
+    assert Image.query.get(image.id).status_trivy is None
+
+
+def test_scan_passes_timeout_kwarg(app, run_task, monkeypatch):
+    from config import Config
+    _image_to_scan(monkeypatch)
+    seen = {}
+
+    def fake_run(cmd, **kwargs):
+        seen["timeout"] = kwargs.get("timeout")
+        return subprocess.CompletedProcess(cmd, 0, stdout=json.dumps({"Results": []}), stderr="")
+
+    monkeypatch.setattr(tasks.subprocess, "run", fake_run)
+    run_task(tasks.trivy_background_task)
+    assert seen["timeout"] == Config.TASK_SCAN_TIMEOUT
