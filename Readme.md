@@ -38,10 +38,31 @@ internet, there must be a secure connection between the server and the agents. T
 sample agent and server setup. You can use it as a starting point. Please change the `HTTP_TOKEN` environment variable
 of the agent to a random string (at least 32 chars). Use the cli to add the agent to the server (see below).
 
+## Web interface
+
+The server ships a web interface (by default at `http://localhost:8000`) that lists hosts, images and
+containers together with their Trivy (vulnerability) and Xeol (end-of-life) findings. Hosts can be
+added, edited and removed directly from the UI.
+
+### Authentication (optional OIDC)
+
+By default the web interface runs **without authentication** — only expose it on a trusted network.
+To protect it, configure an OIDC provider by setting all three environment variables on the server
+(and worker) container; a login via your identity provider is then enforced for the whole UI:
+
+| Variable              | Description                                             |
+|-----------------------|--------------------------------------------------------|
+| `OIDC_DISCOVERY_URL`  | `.../.well-known/openid-configuration` of your provider |
+| `OIDC_CLIENT_ID`      | OIDC client id                                          |
+| `OIDC_CLIENT_SECRET`  | OIDC client secret                                      |
+| `OIDC_SCOPE`          | optional, defaults to `openid email profile`           |
+| `OIDC_REDIRECT_URI`   | optional, override the callback URL behind a proxy      |
+
+Also set a persistent `SECRET_KEY` so sessions survive restarts and are shared across workers.
+
 ## CLI
 
-Since there is no web interface yet, you can use the CLI to interact with the database. The CLI is available via the
-`flask` command. You can use the following commands:
+Alongside the web interface, a CLI is available via the `flask` command for scripted management:
 
 | Command               | Description                                            |
 |-----------------------|--------------------------------------------------------|
@@ -81,6 +102,23 @@ Whenever you change the database models, please create and commit a new migratio
 ```bash
 flask db migrate -m "[your description of the changes]"
 ```
+
+### Tests
+
+Both parts have a pytest suite (server and agent are tested independently). Install the dev
+dependencies and run them from the respective directory:
+
+```bash
+# server
+pip install -r server/requirements-dev.txt
+cd server && PYTHONPATH=. pytest
+
+# agent
+pip install -r agent/requirements-dev.txt
+cd agent && PYTHONPATH=. pytest
+```
+
+The suites also run in CI on every push and pull request (see `.github/workflows/test.yml`).
 
 ## Keywords
 

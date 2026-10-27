@@ -1,0 +1,9 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Tests and dev-only files (not needed in the runtime image)
+tests/
+requirements-dev.txt
+pytest.ini

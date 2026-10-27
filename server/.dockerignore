@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+coverage.xml
+
+# Tests and dev-only files (not needed in the runtime image)
+tests/
+requirements-dev.txt
+pytest.ini
+.coveragerc
+
+# Node (CSS is compiled in a dedicated build stage)
+node_modules/
+
+# Local state that must never leak into the image
+celerybeat-schedule
+*.db
+data/

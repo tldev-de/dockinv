@@ -52,6 +52,16 @@ def cli(app):
     return app.test_cli_runner()
 
 
+@pytest.fixture(autouse=True)
+def _reset_health_cache():
+    # /health caches the detected scanner versions in a module global; clear it so
+    # the "tools present" and "tool missing" tests don't depend on execution order.
+    import routes.general as general
+    general._tool_versions = None
+    yield
+    general._tool_versions = None
+
+
 @pytest.fixture
 def run_task(app):
     """Run a @celery.task against the test app/DB instead of the real one."""
