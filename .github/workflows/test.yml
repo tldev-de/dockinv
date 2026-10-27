@@ -52,3 +52,26 @@ jobs:
         env:
           PYTHONPATH: .
         run: pytest -q
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install -r server/requirements-e2e.txt
+
+      - name: Install Playwright browser
+        run: python -m playwright install --with-deps chromium
+
+      - name: Run browser E2E tests
+        working-directory: server
+        env:
+          PYTHONPATH: .
+        run: pytest e2e -q

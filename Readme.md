@@ -118,7 +118,17 @@ pip install -r agent/requirements-dev.txt
 cd agent && PYTHONPATH=. pytest
 ```
 
-The suites also run in CI on every push and pull request (see `.github/workflows/test.yml`).
+There is also a browser-based end-to-end suite (Playwright) for the HTMX frontend, kept separate
+from the unit tests:
+
+```bash
+pip install -r server/requirements-e2e.txt
+python -m playwright install --with-deps chromium
+cd server && PYTHONPATH=. pytest e2e
+```
+
+The unit, agent and e2e suites all run in CI on every push and pull request
+(see `.github/workflows/test.yml`).
 
 ## Keywords
 
