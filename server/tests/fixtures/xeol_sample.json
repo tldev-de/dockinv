@@ -1,0 +1,16 @@
+{
+  "matches": [
+    {
+      "Cycle": {
+        "ProductName": "Debian",
+        "ReleaseCycle": "10",
+        "ReleaseDate": "2019-07-06",
+        "Eol": "2022-09-10"
+      },
+      "artifact": {
+        "name": "debian",
+        "version": "10"
+      }
+    }
+  ]
+}

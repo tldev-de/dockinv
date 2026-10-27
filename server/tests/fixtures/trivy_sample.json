@@ -1,0 +1,23 @@
+{
+  "SchemaVersion": 2,
+  "ArtifactName": "nginx@sha256:aaa",
+  "Results": [
+    {
+      "Target": "nginx (debian 12.4)",
+      "Class": "os-pkgs",
+      "Type": "debian",
+      "Vulnerabilities": [
+        {"VulnerabilityID": "CVE-0001", "PkgName": "libc", "Severity": "CRITICAL"},
+        {"VulnerabilityID": "CVE-0002", "PkgName": "openssl", "Severity": "HIGH"},
+        {"VulnerabilityID": "CVE-0003", "PkgName": "zlib", "Severity": "MEDIUM"},
+        {"VulnerabilityID": "CVE-0004", "PkgName": "curl", "Severity": "LOW"},
+        {"VulnerabilityID": "CVE-0005", "PkgName": "bash", "Severity": "LOW"}
+      ]
+    },
+    {
+      "Target": "Node.js",
+      "Class": "lang-pkgs",
+      "Type": "node-pkg"
+    }
+  ]
+}
