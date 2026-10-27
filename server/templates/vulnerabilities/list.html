@@ -1,0 +1,39 @@
+{% extends 'base.html.j2' %}
+{% from 'vulnerabilities/_macros.html' import sev, score %}
+
+{% block page %}Vulnerabilities{% endblock %}
+
+{% block filter_table %}vulnTable{% endblock %}
+{% block filter_cols %}0{% endblock %}
+
+{% block body %}
+<table class="table table-zebra" id="vulnTable">
+    <thead>
+        <tr>
+            <th>CVE</th>
+            <th>Severity</th>
+            <th>CVSS</th>
+            <th>Affected Images</th>
+            <th>Affected Containers</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for v in data %}
+        <tr class="hover" data-href="/vulnerabilities/{{ v.id }}" tabindex="0" role="link">
+            <td>{{ v.id }}</td>
+            <td><span class="{{ sev(v.severity) }}">{{ v.severity }}</span></td>
+            <td>{{ score(v.score) }}</td>
+            <td>{{ v.image_count }}</td>
+            <td>{{ v.container_count }}</td>
+        </tr>
+        {% endfor %}
+        {% if not data %}
+        <tr>
+            <td colspan="5" class="text-center opacity-60 py-6">
+                No vulnerabilities found on running containers yet (images need a Trivy scan first).
+            </td>
+        </tr>
+        {% endif %}
+    </tbody>
+</table>
+{% endblock %}

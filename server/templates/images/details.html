@@ -90,7 +90,10 @@
                         {{ finding.Severity }}
                 </td>
                 <td> {{ finding.PkgName }} </td>
-                <td> <a target="_blank" href="{{ finding.PrimaryURL }}" class="underline"> {{ finding.VulnerabilityID }} </a></td>
+                <td>
+                    <a href="/vulnerabilities/{{ finding.VulnerabilityID }}" class="underline">{{ finding.VulnerabilityID }}</a>
+                    {% if finding.PrimaryURL %}<a target="_blank" href="{{ finding.PrimaryURL }}" class="opacity-60 ml-1">↗</a>{% endif %}
+                </td>
                 <td> {{ finding.Status }} </td>
                 <td>
                     <div><span class="font-bold">Installed: </span> {{ finding.InstalledVersion }}</div>

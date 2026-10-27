@@ -2,12 +2,14 @@ from dataclasses import dataclass
 
 from flask import render_template, Blueprint, request, flash, redirect, url_for
 from util import generate_random_string
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 from sqlalchemy.orm import selectinload
 
+from extensions import db
 from models.host import Host
 from models.image import Image
 from models.container import Container
+from models.vulnerability import Vulnerability
 
 frontend = Blueprint('frontend', __name__)
 
@@ -345,3 +347,78 @@ def get_container_details(container_id):
     }
 
     return render_template('container_details.html', container_data=container_data)
+
+
+### Vulnerabilities ###
+_SEVERITY_RANK = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "UNKNOWN": 4}
+
+
+def _rank(severity):
+    return _SEVERITY_RANK.get(severity, 4)
+
+
+@frontend.route('/vulnerabilities', methods=['GET'])
+def get_vulnerabilities():
+    # Only images that actually run somewhere count as "vulnerable containers".
+    container_counts = dict(
+        db.session.query(Container.image_id, func.count(Container.id))
+        .group_by(Container.image_id).all()
+    )
+    agg = {}
+    for v in Vulnerability.query.all():
+        if container_counts.get(v.image_id, 0) == 0:
+            continue
+        entry = agg.get(v.cve_id)
+        if entry is None:
+            entry = agg[v.cve_id] = {'id': v.cve_id, 'severity': v.severity, 'score': v.score, 'images': set()}
+        entry['images'].add(v.image_id)
+        if _rank(v.severity) < _rank(entry['severity']):
+            entry['severity'] = v.severity
+        if v.score is not None and (entry['score'] is None or v.score > entry['score']):
+            entry['score'] = v.score
+
+    data = [{
+        'id': e['id'], 'severity': e['severity'], 'score': e['score'],
+        'image_count': len(e['images']),
+        'container_count': sum(container_counts[i] for i in e['images']),
+    } for e in agg.values()]
+    data.sort(key=lambda d: (d['score'] is None, -(d['score'] or 0), _rank(d['severity']), d['id']))
+    return render_template('vulnerabilities/list.html', data=data)
+
+
+@frontend.route('/vulnerabilities/<cve_id>', methods=['GET'])
+def get_vulnerability_detail(cve_id):
+    vulns = (Vulnerability.query.filter_by(cve_id=cve_id)
+             .options(selectinload(Vulnerability.image)
+                      .selectinload(Image.containers)
+                      .selectinload(Container.host))
+             .all())
+
+    header = {'id': cve_id, 'severity': None, 'score': None, 'url': None}
+    rows = []
+    for v in vulns:
+        if header['severity'] is None or _rank(v.severity) < _rank(header['severity']):
+            header['severity'] = v.severity
+        if v.score is not None and (header['score'] is None or v.score > header['score']):
+            header['score'] = v.score
+        if not header['url'] and v.primary_url:
+            header['url'] = v.primary_url
+        for container in v.image.containers:
+            rows.append({
+                'host': container.host.name,
+                'container': container.name,
+                'container_id': container.id,
+                'image': container.image_string,
+                'image_id': v.image_id,
+                'pkg': v.pkg_name,
+                'installed': v.installed_version,
+                'fixed': v.fixed_version,
+                'severity': v.severity,
+                'score': v.score,
+            })
+
+    if not rows:
+        flash(f'No running containers affected by {cve_id}.', 'info')
+        return redirect(url_for('frontend.get_vulnerabilities'))
+    rows.sort(key=lambda r: (r['host'], r['container']))
+    return render_template('vulnerabilities/detail.html', cve=header, rows=rows)

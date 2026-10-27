@@ -71,8 +71,10 @@ def trivy_background_task():
                 capture_output=True,
                 text=True
             )
-            image.status_trivy = json.loads(result.stdout)
-            image.save()
+            # Single, atomic writer: stores the JSON and rebuilds the normalized
+            # Vulnerability rows in one transaction so they never drift.
+            from vulnerabilities import set_trivy_result
+            set_trivy_result(image, json.loads(result.stdout))
         except subprocess.CalledProcessError as e:
             logger.error(f"Error running trivy: {e}: {e.stderr}")
 

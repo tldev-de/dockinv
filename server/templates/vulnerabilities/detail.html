@@ -1,0 +1,48 @@
+{% extends 'base.html.j2' %}
+{% from 'vulnerabilities/_macros.html' import sev, score %}
+
+{% block page %}{{ cve.id }}{% endblock %}
+
+{% block filter_table %}affectedTable{% endblock %}
+{% block filter_cols %}0,1{% endblock %}
+
+{% block body %}
+<div class="mb-6">
+    <div class="text-2xl font-bold">{{ cve.id }}</div>
+    <div class="mt-1">
+        <span class="{{ sev(cve.severity) }}">{{ cve.severity }}</span>
+        {% if cve.score is not none %} · CVSS {{ score(cve.score) }}{% endif %}
+        {% if cve.url %} · <a href="{{ cve.url }}" target="_blank" class="underline">Details ↗</a>{% endif %}
+    </div>
+    <div class="opacity-60 mt-1">{{ rows|length }} affected container(s)</div>
+</div>
+
+<table class="table table-zebra" id="affectedTable">
+    <thead>
+        <tr>
+            <th>Host</th>
+            <th>Container</th>
+            <th>Image</th>
+            <th>Package</th>
+            <th>Installed</th>
+            <th>Fixed in</th>
+            <th>Severity</th>
+            <th>CVSS</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in rows %}
+        <tr class="hover" data-href="/container/{{ r.container_id }}" tabindex="0" role="link">
+            <td>{{ r.host }}</td>
+            <td>{{ r.container }}</td>
+            <td><a href="/images/{{ r.image_id }}" class="underline">{{ r.image }}</a></td>
+            <td>{{ r.pkg }}</td>
+            <td>{{ r.installed }}</td>
+            <td>{{ r.fixed or '—' }}</td>
+            <td><span class="{{ sev(r.severity) }}">{{ r.severity }}</span></td>
+            <td>{{ score(r.score) }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

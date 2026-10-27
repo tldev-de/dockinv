@@ -1,0 +1,2 @@
+{% macro sev(s) %}{% if s == 'CRITICAL' %}text-error font-bold{% elif s == 'HIGH' %}text-error{% elif s == 'MEDIUM' %}text-warning{% elif s == 'LOW' %}text-info{% else %}opacity-60{% endif %}{% endmacro %}
+{% macro score(x) %}{% if x is not none %}{{ '%.1f'|format(x) }}{% else %}—{% endif %}{% endmacro %}

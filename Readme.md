@@ -73,8 +73,23 @@ Alongside the web interface, a CLI is available via the `flask` command for scri
 | `flask hosts rm`      | Remove a host                                          |
 | `flask images ls`     | List all images (including the trivy and xeol results) |
 | `flask containers ls` | List all found containers                              |
+| `flask vulns ls`      | List CVEs with their max CVSS score and affected image count |
+| `flask vulns verify`  | Check the vulnerability index matches the scan data (exits non-zero on drift) |
+| `flask vulns rebuild` | Rebuild the vulnerability index from the scan data (backfill / repair) |
 
 Use the `--help` flag to get more information about the commands.
+
+### Vulnerabilities view
+
+The **Vulnerabilities** page lists every CVE found across your running containers (severity, CVSS,
+number of affected images/containers). Opening a CVE shows **all affected containers** across all
+hosts — so you can answer "which of my containers are hit by CVE-XXXX?" at a glance. CVE ids on an
+image's detail page link straight to that view.
+
+This index is a normalized projection of each image's raw Trivy result (`status_trivy`), kept in
+lockstep with it in a single transaction whenever a scan completes, so it cannot drift. After
+upgrading an existing database, run `flask vulns rebuild` once to backfill already-scanned images;
+`flask vulns verify` (e.g. in cron/CI) confirms the index is still consistent.
 
 ## Dev Setup
 

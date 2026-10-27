@@ -84,6 +84,8 @@ def register_commands(app: Flask):
     app.cli.add_command(hosts)
     from commands.containers import containers
     app.cli.add_command(containers)
+    from commands.vulns import vulns
+    app.cli.add_command(vulns)
 
 
 if __name__ == '__main__':
