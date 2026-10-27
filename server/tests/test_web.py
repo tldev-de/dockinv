@@ -155,3 +155,27 @@ def test_logout_clears_session(client):
     assert r.status_code == 302
     with client.session_transaction() as sess:
         assert "user" not in sess
+
+
+def test_csrf_rejects_post_without_token(monkeypatch, tmp_path):
+    # The default fixtures disable CSRF for convenience; build a CSRF-enabled app
+    # and confirm a form POST without a token is rejected (Flask-WTF -> 400).
+    for var in ("OIDC_DISCOVERY_URL", "OIDC_CLIENT_ID", "OIDC_CLIENT_SECRET"):
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setenv("SECRET_KEY", "test")
+    from app import create_app
+    from extensions import db
+    from config import Config
+
+    class _Cfg(Config):
+        WTF_CSRF_ENABLED = True
+        SQLALCHEMY_DATABASE_URI = f"sqlite:///{tmp_path / 'csrf.db'}"
+
+    app = create_app(_Cfg)
+    with app.app_context():
+        db.create_all()
+    r = app.test_client().post("/hosts/save",
+                               data={"name": "n", "address": "http://x", "token": "t"})
+    assert r.status_code == 400
+    with app.app_context():
+        assert Host.query.count() == 0
