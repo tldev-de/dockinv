@@ -10,6 +10,7 @@ from sqlalchemy import or_, null
 
 from config import Config
 from models import Image, Host, Container
+from tasklock import single_instance
 
 # Broker is read from the environment so the web process can enqueue tasks (e.g.
 # the "Collect now" button) too, not just the CLI-started worker.
@@ -54,6 +55,7 @@ def setup_periodic_tasks(**kwargs):
 
 
 @celery.task
+@single_instance(timeout=3600)
 def trivy_background_task():
     logger.info(f'Task trivy started at {datetime.now().strftime("%X")}')
     images = (Image.query
@@ -82,6 +84,7 @@ def trivy_background_task():
 
 
 @celery.task
+@single_instance(timeout=3600)
 def xeol_background_task():
     logger.info(f'Task xeol started at {datetime.now().strftime("%X")}')
     images = (Image.query
@@ -108,6 +111,7 @@ def xeol_background_task():
 
 
 @celery.task
+@single_instance(timeout=600)
 def data_collector_background_task():
     logger.info(f'Task data started at {datetime.now().strftime("%X")}')
     hosts = Host.query.filter_by(enabled=True).all()
