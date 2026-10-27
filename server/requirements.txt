@@ -9,3 +9,4 @@ click~=8.4.2
 tabulate~=0.10.0
 click_aliases~=1.0.6
 requests~=2.34.2
+Authlib~=1.6.1

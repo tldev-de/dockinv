@@ -63,6 +63,13 @@
             </label>
         </div>
 
+        {% if session.user %}
+        <div class="mr-4 flex items-center gap-2">
+            <span class="text-sm opacity-70">{{ session.user.email or session.user.name or session.user.sub }}</span>
+            <a class="btn btn-sm btn-ghost" href="{{ url_for('auth.logout') }}">Logout</a>
+        </div>
+        {% endif %}
+
         <!--
         <div class="form-control">
             <input type="text" placeholder="Host, Image, Container" class="input input-bordered w-24 md:w-auto"/>

@@ -6,6 +6,7 @@ from flask import Flask
 
 from config import Config
 from extensions import db, migrate, csrf
+from auth import auth, init_auth
 from routes.general import general
 from routes.frontend import frontend
 
@@ -23,10 +24,14 @@ def create_app(config_object=Config):
             stacklevel=2,
         )
     app.secret_key = secret_key
+    # SameSite=Lax so the session cookie is sent on the OIDC redirect back.
+    app.config.setdefault('SESSION_COOKIE_HTTPONLY', True)
+    app.config.setdefault('SESSION_COOKIE_SAMESITE', 'Lax')
 
     register_blueprints(app)
     register_extensions(app)
     register_commands(app)
+    init_auth(app)
     return app
 
 
@@ -40,6 +45,7 @@ def register_extensions(app):
 def register_blueprints(app):
     app.register_blueprint(general)
     app.register_blueprint(frontend)
+    app.register_blueprint(auth)
     return None
 
 

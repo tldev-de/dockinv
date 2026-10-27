@@ -19,6 +19,13 @@ services:
     environment:
       - DATABASE_AUTO_UPGRADE=1
       - SECRET_KEY=change_me_to_a_random_secret
+      # Optional: enable OIDC login for the web UI. Set all three to activate.
+      # Without them the UI runs WITHOUT authentication (warned at startup).
+      # - OIDC_DISCOVERY_URL=https://idp.example/.well-known/openid-configuration
+      # - OIDC_CLIENT_ID=change_me
+      # - OIDC_CLIENT_SECRET=change_me
+      # - OIDC_SCOPE=openid email profile          # optional, this is the default
+      # - OIDC_REDIRECT_URI=https://dockinv.example/auth/callback  # optional, override if behind a proxy
     volumes:
         - data:/data
 
