@@ -32,7 +32,7 @@ COPY --chown=dockinv:dockinv --from=css-builder /build/static/css/theme.css ./st
 USER dockinv
 
 # Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --only-binary=:all: -r requirements.txt
 
 # Set the PATH
 ENV PATH=/home/dockinv/.local/bin:$PATH

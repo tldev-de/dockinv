@@ -11,7 +11,7 @@ COPY agent.py .
 # this container must run as root to access the docker socket
 
 # Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --only-binary=:all: -r requirements.txt
 
 # Set environment variables
 ENV DOCKER_HOST=unix:///var/run/docker.sock

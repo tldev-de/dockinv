@@ -19,7 +19,7 @@ jobs:
           python-version: "3.13"
 
       - name: Install dependencies
-        run: pip install -r server/requirements-dev.txt
+        run: "pip install --only-binary=:all: -r server/requirements-dev.txt"
 
       - name: Run tests
         working-directory: server
@@ -45,7 +45,7 @@ jobs:
           python-version: "3.13"
 
       - name: Install dependencies
-        run: pip install -r agent/requirements-dev.txt
+        run: "pip install --only-binary=:all: -r agent/requirements-dev.txt"
 
       - name: Run tests
         working-directory: agent
@@ -65,7 +65,7 @@ jobs:
           python-version: "3.13"
 
       - name: Install dependencies
-        run: pip install -r server/requirements-e2e.txt
+        run: "pip install --only-binary=:all: -r server/requirements-e2e.txt"
 
       - name: Install Playwright browser
         run: python -m playwright install --with-deps chromium
