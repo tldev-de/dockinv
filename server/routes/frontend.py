@@ -112,8 +112,7 @@ def transform_xeol_findings_for_display(image):
 ######### Routes #########
 
 ### Hosts ###
-@frontend.route('/hosts', methods=['GET'])
-def get_hosts():
+def _hosts_overview():
     hosts = Host.query.options(
         selectinload(Host.containers).selectinload(Container.image)
     ).all()
@@ -136,8 +135,29 @@ def get_hosts():
             'eol_images': eol_images,
             'trivy_findings': trivy_findings,
         })
+    return data
 
-    return render_template('hosts/hosts.html', data=data)
+
+@frontend.route('/hosts', methods=['GET'])
+def get_hosts():
+    return render_template('hosts/hosts.html', data=_hosts_overview())
+
+
+@frontend.route('/hosts/table', methods=['GET'])
+def get_hosts_table():
+    """HTMX partial: just the hosts table (used for polling / live refresh)."""
+    return render_template('hosts/_hosts_table.html', data=_hosts_overview())
+
+
+@frontend.route('/hosts/collect', methods=['POST'])
+def collect_hosts():
+    """HTMX: trigger an on-demand data collection, then return the refreshed table."""
+    from tasks import data_collector_background_task
+    try:
+        data_collector_background_task.delay()
+    except Exception as e:  # broker unreachable from the web process
+        flash(f'Could not trigger collection: {e}', 'error')
+    return render_template('hosts/_hosts_table.html', data=_hosts_overview())
 
 
 @frontend.route('/hosts/<int:host_id>', methods=['GET'])

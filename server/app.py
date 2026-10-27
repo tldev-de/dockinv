@@ -32,7 +32,32 @@ def create_app(config_object=Config):
     register_extensions(app)
     register_commands(app)
     init_auth(app)
+    register_security_headers(app)
     return app
+
+
+def register_security_headers(app):
+    # All JS is served from local files (htmx + app.js), so a strict script-src
+    # is possible. Inline styles are still used (DaisyUI, htmx indicator, a few
+    # style="" attributes), hence 'unsafe-inline' is kept only for styles.
+    csp = (
+        "default-src 'self'; "
+        "script-src 'self'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data:; "
+        "connect-src 'self'; "
+        "base-uri 'self'; "
+        "form-action 'self'; "
+        "frame-ancestors 'none'"
+    )
+
+    @app.after_request
+    def _apply_security_headers(response):
+        response.headers.setdefault('Content-Security-Policy', csp)
+        response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+        return response
+
+    return None
 
 
 def register_extensions(app):

@@ -19,6 +19,7 @@ services:
     environment:
       - DATABASE_AUTO_UPGRADE=1
       - SECRET_KEY=change_me_to_a_random_secret
+      - CELERY_BROKER_URL=redis://redis:6379/0   # lets the "Collect now" button enqueue tasks
       # Optional: enable OIDC login for the web UI. Set all three to activate.
       # Without them the UI runs WITHOUT authentication (warned at startup).
       # - OIDC_DISCOVERY_URL=https://idp.example/.well-known/openid-configuration

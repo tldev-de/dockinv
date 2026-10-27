@@ -27,6 +27,7 @@ services:
       - DATABASE_AUTO_UPGRADE=1
       - HOSTS_ADD_DEV_AGENT=1
       - SECRET_KEY=dev_secret_not_for_production
+      - CELERY_BROKER_URL=redis://redis:6379/0   # lets the "Collect now" button enqueue tasks
     volumes:
         - ./data:/data
         - ./server:/app

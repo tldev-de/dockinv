@@ -33,9 +33,12 @@
         {{ self.page() }}
     </div>
     <div class="flex-1 navbar-end">
-        {% if self.search is defined and self.search() %}
+        {% set filter_target = (self.filter_table()|trim) if self.filter_table is defined else '' %}
+        {% if filter_target %}
         <div class="mr-4">
-            <input class="input input-bordered" type="text" id="filter" placeholder="Search..." onkeyup="tableFilter( {{ self.search() }})">
+            <input class="input input-bordered" type="text" id="filter" placeholder="Search..."
+                   data-filter-target="{{ filter_target }}"
+                   data-filter-cols="{{ (self.filter_cols()|trim) if self.filter_cols is defined else '' }}">
         </div>
         {% endif %}
         <div class="mr-4">
@@ -97,74 +100,8 @@
 <div class="fixed bottom-0 left-0 p-4">
 
 </div>
-{% block scripts %}
-    <script>
-
-    document.addEventListener('DOMContentLoaded', function () {
-
-        // Basic sort functionality fpr tables
-        document.querySelectorAll('table').forEach(function(table) {
-            const headers = table.querySelectorAll('th');
-            const sortDirection = {};
-
-            headers.forEach((th, idx) => {
-                th.style.cursor = 'pointer';
-                th.addEventListener('click', function () {
-                    const tbody = table.querySelector('tbody');
-                    if (!tbody) return;
-                    const rows = Array.from(tbody.rows);
-                    sortDirection[idx] = sortDirection[idx] === 'asc' ? 'desc' : 'asc';
-                    const dir = sortDirection[idx];
-
-                    rows.sort((a, b) => {
-                        let aText = a.cells[idx]?.textContent.trim() ?? '';
-                        let bText = b.cells[idx]?.textContent.trim() ?? '';
-                        let aNum = parseFloat(aText.replace(/[^0-9.\-]/g, ''));
-                        let bNum = parseFloat(bText.replace(/[^0-9.\-]/g, ''));
-                        if (!isNaN(aNum) && !isNaN(bNum)) {
-                            return dir === 'asc' ? aNum - bNum : bNum - aNum;
-                        }
-                        return dir === 'asc'
-                            ? aText.localeCompare(bText)
-                            : bText.localeCompare(aText);
-                    });
-
-                    const fragment = document.createDocumentFragment();
-                    rows.forEach(row => fragment.appendChild(row));
-                    tbody.appendChild(fragment);
-                });
-            });
-        });
-
-        // Auto-hide flash messages
-        setTimeout(function () {
-            document.querySelectorAll('.alert').forEach(function(alert) {
-                alert.style.transition = 'opacity 0.5s';
-                alert.style.opacity = '0';
-                setTimeout(function() {
-                    alert.style.display = 'none';
-                }, 500);
-            });
-        }, 3000);
-    });
-
-    function tableFilter(tableId, colIndices) {
-        const input = document.getElementById('filter').value.toLowerCase();
-        const table = document.getElementById(tableId);
-        const rows = table.getElementsByTagName('tr');
-        for (let i = 1; i < rows.length; i++) { // skip header row
-            const cells = rows[i].getElementsByTagName('td');
-            let match = false;
-            for (const idx of colIndices) {
-                if (cells[idx] && cells[idx].textContent.toLowerCase().includes(input)) {
-                    match = true;
-                    break;
-                }
-            }
-            rows[i].style.display = match ? '' : 'none';
-        }
-    }
-    </script>
-{% endblock %}
+<script src="{{ url_for('static', filename='js/htmx.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block scripts %}{% endblock %}
 </body>
 </html>

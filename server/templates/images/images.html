@@ -4,9 +4,8 @@
     Images
 {% endblock %}
 
-{% block search %}
-    'imagesTable', [0]
-{% endblock %}
+{% block filter_table %}imagesTable{% endblock %}
+{% block filter_cols %}0{% endblock %}
 
 {% block body %}
 <table class="table table-zebra" id="imagesTable">
@@ -20,7 +19,7 @@
     </thead>
     <tbody>
     {% for image in data %}
-    <tr class="hover" onclick="openImage('{{ image.id }}')">
+    <tr class="hover" data-href="/images/{{ image.id }}" tabindex="0" role="link">
         <td>
             {{ image.name }}
             <br/>
@@ -47,14 +46,4 @@
     {% endfor %}
     </tbody>
 </table>
-{% endblock %}
-
-{% block scripts %}
-{{ super() }}
-<script>
-    function openImage(id) {
-        globalThis.location.href = "/images/" + id;
-    }
-
-</script>
 {% endblock %}

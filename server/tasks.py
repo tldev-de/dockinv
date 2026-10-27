@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import requests
 from datetime import datetime, timezone, timedelta
@@ -10,7 +11,10 @@ from sqlalchemy import or_, null
 from config import Config
 from models import Image, Host, Container
 
-celery = Celery('tasks', broker_connection_retry_on_startup=True)
+# Broker is read from the environment so the web process can enqueue tasks (e.g.
+# the "Collect now" button) too, not just the CLI-started worker.
+celery = Celery('tasks', broker=os.getenv('CELERY_BROKER_URL'),
+                broker_connection_retry_on_startup=True)
 
 logger = get_task_logger(__name__)
 

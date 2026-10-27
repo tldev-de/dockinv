@@ -4,9 +4,8 @@
     {{ data.host.name }}
 {% endblock %}
 
-{% block search %}
-    'containerTable', [0,1]
-{% endblock %}
+{% block filter_table %}containerTable{% endblock %}
+{% block filter_cols %}0,1{% endblock %}
 
 {% block body %}
 
@@ -21,7 +20,7 @@
     </thead>
     <tbody>
         {% for container in data.containers %}
-            <tr class="hover" onclick="openHost('{{ container.id }}')" onkeydown="if(event.key==='Enter')openHost('{{ container.id }}')" tabindex="0">
+            <tr class="hover" data-href="/container/{{ container.id }}" tabindex="0" role="link">
                 <td>{{ container.name }}</td>
                 <td>
                     <div class="tooltip" data-tip="{{ container.image_hash }}">
@@ -48,13 +47,4 @@
         {% endfor %}
     </tbody>
 </table>
-{% endblock %}
-
-{% block scripts %}
-{{ super() }}
-<script>
-    function openHost(id) {
-        globalThis.location.href = '/container/' + id;
-    }
-</script>
 {% endblock %}
