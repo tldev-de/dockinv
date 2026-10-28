@@ -5,6 +5,7 @@
             <th>CVE</th>
             <th>Severity</th>
             <th>CVSS</th>
+            <th>Fix</th>
             <th>Packages</th>
             <th>Affected Images</th>
             <th>Containers</th>
@@ -16,14 +17,18 @@
             <td>{{ v.id }}</td>
             <td><span class="{{ sev(v.severity) }}">{{ v.severity }}</span></td>
             <td>{{ score(v.score) }}</td>
-            <td class="text-sm">{{ v.packages }}</td>
-            <td class="text-sm">{{ v.images }}</td>
+            <td>
+                {% if v.fixable %}<span class="text-success" title="A fixed version is available">✓ fix</span>
+                {% else %}<span class="opacity-50" title="No fixed version available yet">✗ none</span>{% endif %}
+            </td>
+            <td class="text-sm"><div class="max-w-xs truncate" title="{{ v.packages }}">{{ v.packages }}</div></td>
+            <td class="text-sm"><div class="max-w-xs truncate" title="{{ v.images }}">{{ v.images }}</div></td>
             <td>{{ v.container_count }}</td>
         </tr>
         {% endfor %}
         {% if not data %}
         <tr>
-            <td colspan="6" class="text-center opacity-60 py-6">No vulnerabilities match the current filters.</td>
+            <td colspan="7" class="text-center opacity-60 py-6">No vulnerabilities match the current filters.</td>
         </tr>
         {% endif %}
     </tbody>

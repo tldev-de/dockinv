@@ -26,6 +26,13 @@
         <input id="min_cvss" name="min_cvss" value="{{ min_cvss }}" type="number" step="0.1" min="0" max="10"
                class="input input-bordered input-sm w-24">
     </div>
+    <div>
+        <label class="label cursor-pointer gap-2" for="fixable">
+            <span>Only fixable</span>
+            <input id="fixable" name="fixable" type="checkbox" value="1" {% if fixable %}checked{% endif %}
+                   class="checkbox checkbox-sm">
+        </label>
+    </div>
 </form>
 
 {% include 'vulnerabilities/_table.html' %}

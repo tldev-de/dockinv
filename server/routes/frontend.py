@@ -394,10 +394,11 @@ def _parse_vuln_filters(args):
         min_cvss = float(raw_cvss) if raw_cvss else None
     except ValueError:
         min_cvss = None
-    return cve, severity, min_cvss
+    only_fixable = (args.get('fixable') or '').strip().lower() in ('1', 'true', 'on', 'yes')
+    return cve, severity, min_cvss, only_fixable
 
 
-def _vulnerabilities_overview(cve='', severity='', min_cvss=None):
+def _vulnerabilities_overview(cve='', severity='', min_cvss=None, only_fixable=False):
     # Only images that actually run somewhere count as "vulnerable containers".
     container_counts = dict(
         db.session.query(Container.image_id, func.count(Container.id))
@@ -416,10 +417,11 @@ def _vulnerabilities_overview(cve='', severity='', min_cvss=None):
         entry = agg.get(v.cve_id)
         if entry is None:
             entry = agg[v.cve_id] = {'id': v.cve_id, 'severity': v.severity, 'score': v.score,
-                                     'images': set(), 'packages': set()}
+                                     'images': set(), 'packages': set(), 'fixable': False}
         entry['images'].add(v.image_id)
         if v.pkg_name:
             entry['packages'].add(v.pkg_name)
+        entry['fixable'] = entry['fixable'] or bool(v.fixed_version)
         if _rank(v.severity) < _rank(entry['severity']):
             entry['severity'] = v.severity
         if v.score is not None and (entry['score'] is None or v.score > entry['score']):
@@ -431,8 +433,11 @@ def _vulnerabilities_overview(cve='', severity='', min_cvss=None):
             continue  # keep only CVEs at or above the selected minimum severity
         if min_cvss is not None and (e['score'] is None or e['score'] < min_cvss):
             continue
+        if only_fixable and not e['fixable']:
+            continue  # keep only CVEs with a fixed version available somewhere
         data.append({
             'id': e['id'], 'severity': e['severity'], 'score': e['score'],
+            'fixable': e['fixable'],
             'packages': ', '.join(sorted(e['packages'])),
             'images': ', '.join(sorted({image_names.get(i, '?') for i in e['images']})),
             'image_count': len(e['images']),
@@ -444,18 +449,19 @@ def _vulnerabilities_overview(cve='', severity='', min_cvss=None):
 
 @frontend.route('/vulnerabilities', methods=['GET'])
 def get_vulnerabilities():
-    cve, severity, min_cvss = _parse_vuln_filters(request.args)
-    data = _vulnerabilities_overview(cve, severity, min_cvss)
+    cve, severity, min_cvss, only_fixable = _parse_vuln_filters(request.args)
+    data = _vulnerabilities_overview(cve, severity, min_cvss, only_fixable)
     return render_template('vulnerabilities/list.html', data=data,
-                           cve=cve, severity=severity, min_cvss=request.args.get('min_cvss', ''))
+                           cve=cve, severity=severity, min_cvss=request.args.get('min_cvss', ''),
+                           fixable=only_fixable)
 
 
 @frontend.route('/vulnerabilities/table', methods=['GET'])
 def get_vulnerabilities_table():
     """HTMX partial: the filtered vulnerability table."""
-    cve, severity, min_cvss = _parse_vuln_filters(request.args)
+    cve, severity, min_cvss, only_fixable = _parse_vuln_filters(request.args)
     return render_template('vulnerabilities/_table.html',
-                           data=_vulnerabilities_overview(cve, severity, min_cvss))
+                           data=_vulnerabilities_overview(cve, severity, min_cvss, only_fixable))
 
 
 @frontend.route('/vulnerabilities/<cve_id>', methods=['GET'])

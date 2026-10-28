@@ -154,7 +154,27 @@ class TestRoutes:
     def test_filter_controls_present(self, client):
         html = client.get("/vulnerabilities").data.decode()
         assert 'name="cve"' in html and 'name="severity"' in html and 'name="min_cvss"' in html
+        assert 'name="fixable"' in html   # "only fixable" toggle
         assert 'hx-get="/vulnerabilities/table"' in html
+
+    def _seed_fixable_and_not(self, suffix="f"):
+        host = make_host(f"h{suffix}")
+        img = make_image_with_container(host, f"i{suffix}", f"i{suffix}@sha256:7", f"c-{suffix}")
+        vuln_service.set_trivy_result(img, trivy_blob(
+            vuln("CVE-FIXABLE", severity="HIGH", v3=8.0, pkg="p1", fixed="1.2"),
+            vuln("CVE-NOFIX", severity="HIGH", v3=8.0, pkg="p2", fixed="")))
+        return img
+
+    def test_list_shows_fix_availability(self, client):
+        self._seed_fixable_and_not()
+        html = client.get("/vulnerabilities").data.decode()
+        assert "✓ fix" in html and "✗ none" in html
+
+    def test_filter_only_fixable(self, client):
+        self._seed_fixable_and_not("f2")
+        html = client.get("/vulnerabilities?fixable=1").data.decode()
+        assert "CVE-FIXABLE" in html
+        assert "CVE-NOFIX" not in html   # no fixed version -> hidden
 
     def test_filter_by_cve(self, client):
         self._seed_two()
