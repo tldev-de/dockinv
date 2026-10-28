@@ -30,6 +30,20 @@ def test_collect_button_triggers_htmx_post(page, live_server):
     assert page.locator("#hostTable").count() == 1
 
 
+def test_scan_button_triggers_htmx_post(page, live_server):
+    # "Scan now" on the Images page enqueues Trivy+Xeol via an htmx POST and swaps
+    # the table in place (no full navigation).
+    page.goto(f"{live_server}/images", wait_until="load")
+    with page.expect_response(
+        lambda r: "/images/scan" in r.url and r.request.method == "POST"
+    ) as info:
+        page.locator("button", has_text="Scan now").click()
+    assert info.value.status == 200          # CSRF header accepted by the server
+    page.wait_for_timeout(200)
+    assert page.url.rstrip("/").endswith("/images")
+    assert page.locator("#imagesTable").count() == 1
+
+
 def test_table_partial_swap(page, live_server):
     # Same mechanism the 60s poll uses: hx-get /hosts/table, outerHTML swap.
     page.goto(f"{live_server}/hosts", wait_until="load")

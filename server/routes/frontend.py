@@ -121,7 +121,7 @@ def _hosts_overview():
 
     data = []
     for host in hosts:
-        last_call = host.updated_at or host.created_at
+        last_call = host.last_seen  # None until the collector first reaches the agent
         docker_containers = len(host.containers)
         docker_images = len(set(container.image_id for container in host.containers))
         eol_images = count_eol_images(host)
@@ -275,27 +275,47 @@ def delete_host(host_id):
     return redirect(url_for(HOSTS_ROUTE))
 
 ### Images ###
-@frontend.route('/images', methods=['GET'])
-def get_images():
-    images = Image.query.filter(Image.containers.any()).all()
-
+def _images_overview():
     data = []
-    for image in images:
-        is_eol = is_image_eol(image)
-        trivy_findings = count_trivy_findings_image(image)
-        usage_count = len(image.containers)
-
+    for image in Image.query.filter(Image.containers.any()).all():
         data.append({
             'id': image.id,
             'image_tags': ', '.join(sorted({c.image_string for c in image.containers})),
             'name': image.name,
             'repo_digest': image.repo_digest,
-            'is_eol': is_eol,
-            'trivy_findings': trivy_findings,
-            'usage_count': usage_count,
+            'is_eol': is_image_eol(image),
+            'trivy_findings': count_trivy_findings_image(image),
+            'usage_count': len(image.containers),
         })
+    return data
 
-    return render_template('images/images.html', data=data)
+
+@frontend.route('/images', methods=['GET'])
+def get_images():
+    return render_template('images/images.html', data=_images_overview())
+
+
+@frontend.route('/images/table', methods=['GET'])
+def get_images_table():
+    """HTMX partial: just the images table."""
+    return render_template('images/_images_table.html', data=_images_overview())
+
+
+@frontend.route('/images/scan', methods=['POST'])
+def scan_images():
+    """HTMX: trigger an on-demand Trivy + Xeol scan, then return the refreshed table.
+
+    The scan tasks pick up images that are new or stale (>24h); results appear on
+    the next refresh since scanning runs asynchronously in the worker.
+    """
+    try:
+        from tasks import trivy_background_task, xeol_background_task
+        trivy_background_task.delay()
+        xeol_background_task.delay()
+        flash('Scan triggered for pending/stale images.', 'info')
+    except Exception as e:  # broker unreachable from the web process
+        flash(f'Could not trigger scan: {e}', 'error')
+    return render_template('images/_images_table.html', data=_images_overview())
 
 @frontend.route('/images/<int:image_id>', methods=['GET'])
 def get_image_details(image_id):

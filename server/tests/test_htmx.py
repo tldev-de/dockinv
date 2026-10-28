@@ -66,6 +66,37 @@ class TestCollectTrigger:
         assert b'id="hostTable"' in r.data
 
 
+class TestScanTrigger:
+    def test_images_page_has_scan_button(self, client):
+        assert b'hx-post="/images/scan"' in client.get("/images").data
+
+    def test_images_table_partial(self, client):
+        r = client.get("/images/table")
+        assert r.status_code == 200
+        assert b'id="imagesTable"' in r.data
+        assert b"<html" not in r.data   # partial, not a full page
+
+    def test_scan_enqueues_trivy_and_xeol(self, client, monkeypatch):
+        trivy = MagicMock()
+        xeol = MagicMock()
+        monkeypatch.setattr(tasks.trivy_background_task, "delay", trivy)
+        monkeypatch.setattr(tasks.xeol_background_task, "delay", xeol)
+        r = client.post("/images/scan")
+        assert r.status_code == 200
+        trivy.assert_called_once()
+        xeol.assert_called_once()
+        assert b'id="imagesTable"' in r.data
+
+    def test_scan_survives_broker_error(self, client, monkeypatch):
+        def boom():
+            raise RuntimeError("broker unreachable")
+        monkeypatch.setattr(tasks.trivy_background_task, "delay", boom)
+        monkeypatch.setattr(tasks.xeol_background_task, "delay", MagicMock())
+        r = client.post("/images/scan")
+        assert r.status_code == 200
+        assert b'id="imagesTable"' in r.data
+
+
 class TestSecurityHeaders:
     def test_csp_and_nosniff_present(self, client):
         r = client.get("/hosts")

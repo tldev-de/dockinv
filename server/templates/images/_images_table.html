@@ -1,0 +1,43 @@
+<table class="table table-zebra" id="imagesTable">
+    <thead>
+    <tr>
+        <th>Image Name</th>
+        <th>Result of XEOL</th>
+        <th>Result of Trivy</th>
+        <th>Usage by Containers</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for image in data %}
+    <tr class="hover" data-href="/images/{{ image.id }}" tabindex="0" role="link">
+        <td>
+            {{ image.name }}
+            <br/>
+            <small class="text-gray-500">{{ image.repo_digest }}</small>
+            <br/>
+            <small class="text-gray-500">{{ image.image_tags }}</small>
+        </td>
+        <td>
+            {% if image.is_eol == True %}
+            <span class="text-error">EOL</span>
+            {% elif image.is_eol == False %}
+            <span class="text-success">OK</span>
+            {% endif %}
+        </td>
+        <td>
+            {% if image.trivy_findings %}
+            <span class="text-error">{{ image.trivy_findings['high'] }}</span> |
+            <span class="text-warning">{{ image.trivy_findings['medium'] }}</span> |
+            <span class="text-info">{{ image.trivy_findings['low'] }}</span>
+            {% endif %}
+        </td>
+        <td>{{ image.usage_count }}</td>
+    </tr>
+    {% endfor %}
+    {% if not data %}
+    <tr>
+        <td colspan="4" class="text-center opacity-60 py-6">No images with running containers yet.</td>
+    </tr>
+    {% endif %}
+    </tbody>
+</table>
