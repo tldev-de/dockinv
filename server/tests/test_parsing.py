@@ -4,8 +4,6 @@ import os
 from datetime import date, datetime, timedelta, timezone
 from types import SimpleNamespace
 
-import pytest
-
 from routes import frontend
 from util import (parse_trivy_to_str, parse_xeol_to_str, generate_random_string,
                   cycle_is_eol, humanize_age, is_stale)
@@ -52,6 +50,11 @@ class TestCountTrivyFindingsImage:
 
     def test_result_without_vulnerabilities(self):
         f = frontend.count_trivy_findings_image(img(trivy={"Results": [{"Target": "x"}]}))
+        assert (f.critical, f.high, f.medium, f.low) == (0, 0, 0, 0)
+
+    def test_missing_results_key_tolerated(self):
+        # Trivy omits "Results" when it can't analyze an image; count as zero, don't crash.
+        f = frontend.count_trivy_findings_image(img(trivy={"foo": "bar"}))
         assert (f.critical, f.high, f.medium, f.low) == (0, 0, 0, 0)
 
 
@@ -140,10 +143,9 @@ class TestTransformForDisplay:
     def test_trivy_none_when_no_status(self):
         assert frontend.transform_trivy_findings_for_display(img(trivy=None)) is None
 
-    def test_trivy_raises_keyerror_without_results_key(self):
-        # Documents the hard status_trivy["Results"] access.
-        with pytest.raises(KeyError):
-            frontend.transform_trivy_findings_for_display(img(trivy={"foo": "bar"}))
+    def test_trivy_tolerates_missing_results_key(self):
+        # Trivy omits "Results" when it can't analyze an image; must not crash the page.
+        assert frontend.transform_trivy_findings_for_display(img(trivy={"foo": "bar"})) == []
 
     def test_xeol_mapping_and_sort(self):
         out = frontend.transform_xeol_findings_for_display(img(xeol=XEOL))
