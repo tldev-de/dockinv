@@ -101,6 +101,10 @@
 <div class="fixed bottom-0 left-0 p-4">
 
 </div>
+
+<!-- htmx out-of-band target for transient toasts (see _toast.html) -->
+<div id="toast" class="toast toast-end"></div>
+
 <script src="{{ url_for('static', filename='js/htmx.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 {% block scripts %}{% endblock %}

@@ -1,0 +1,10 @@
+{# Out-of-band toast: swapped into #toast by htmx responses. Shows a transient
+   message and (optionally) schedules a one-shot delayed refresh of a table so
+   async task results appear without the user reloading. app.js fades it out. #}
+<div id="toast" hx-swap-oob="true" class="toast toast-end">
+    <div class="alert alert-{{ category or 'info' }}"><span>{{ message }}</span></div>
+    {% if refresh_url %}
+    <span hx-get="{{ refresh_url }}" hx-target="{{ refresh_target }}" hx-swap="outerHTML"
+          hx-trigger="load delay:{{ refresh_delay or 4 }}s"></span>
+    {% endif %}
+</div>

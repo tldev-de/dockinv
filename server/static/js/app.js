@@ -102,4 +102,18 @@
   document.addEventListener("htmx:afterSwap", function (e) {
     initTableSort(e.target);
   });
+
+  // Fade out transient toasts (OOB-swapped into #toast by collect/scan responses).
+  function hideToastSoon() {
+    setTimeout(function () {
+      document.querySelectorAll("#toast .alert").forEach(function (a) {
+        a.style.transition = "opacity 0.5s";
+        a.style.opacity = "0";
+        setTimeout(function () { a.remove(); }, 500);
+      });
+    }, 5000);
+  }
+  document.addEventListener("htmx:oobAfterSwap", function (e) {
+    if (e.target && e.target.id === "toast") hideToastSoon();
+  });
 })();

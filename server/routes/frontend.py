@@ -211,13 +211,18 @@ def get_hosts_table():
 
 @frontend.route('/hosts/collect', methods=['POST'])
 def collect_hosts():
-    """HTMX: trigger an on-demand data collection, then return the refreshed table."""
+    """HTMX: trigger an on-demand data collection, show a toast, and schedule a
+    one-shot refresh so the freshly collected data appears without a manual reload."""
     from tasks import data_collector_background_task
     try:
         data_collector_background_task.delay()
+        toast = {'message': 'Collection queued — refreshing in a moment…',
+                 'refresh_url': url_for('frontend.get_hosts_table'),
+                 'refresh_target': '#hostTable', 'refresh_delay': 3}
     except Exception as e:  # broker unreachable from the web process
-        flash(f'Could not trigger collection: {e}', 'error')
-    return render_template('hosts/_hosts_table.html', data=_hosts_overview())
+        toast = {'message': f'Could not trigger collection: {e}', 'category': 'error'}
+    return (render_template('hosts/_hosts_table.html', data=_hosts_overview())
+            + render_template('_toast.html', **toast))
 
 
 @frontend.route('/hosts/<int:host_id>', methods=['GET'])
@@ -373,10 +378,13 @@ def scan_images():
         from tasks import trivy_background_task, xeol_background_task
         trivy_background_task.delay()
         xeol_background_task.delay()
-        flash('Scan triggered for pending/stale images.', 'info')
+        toast = {'message': 'Scan queued — results appear as scans finish (can take a few minutes).',
+                 'refresh_url': url_for('frontend.get_images_table'),
+                 'refresh_target': '#imagesTable', 'refresh_delay': 6}
     except Exception as e:  # broker unreachable from the web process
-        flash(f'Could not trigger scan: {e}', 'error')
-    return render_template('images/_images_table.html', data=_images_overview())
+        toast = {'message': f'Could not trigger scan: {e}', 'category': 'error'}
+    return (render_template('images/_images_table.html', data=_images_overview())
+            + render_template('_toast.html', **toast))
 
 @frontend.route('/images/<int:image_id>', methods=['GET'])
 def get_image_details(image_id):

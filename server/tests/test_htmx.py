@@ -26,6 +26,9 @@ class TestHtmxWiring:
     def test_collect_button_present(self, client):
         assert b'hx-post="/hosts/collect"' in client.get("/hosts").data
 
+    def test_toast_container_present(self, client):
+        assert b'id="toast"' in client.get("/hosts").data   # OOB target for feedback toasts
+
     def test_rows_use_data_href_not_inline_onclick(self, client):
         seed_host()
         html = client.get("/hosts").data
@@ -49,13 +52,17 @@ class TestHostsTablePartial:
 
 
 class TestCollectTrigger:
-    def test_collect_enqueues_and_returns_table(self, client, monkeypatch):
+    def test_collect_enqueues_and_returns_table_with_toast(self, client, monkeypatch):
         mock = MagicMock()
         monkeypatch.setattr(tasks.data_collector_background_task, "delay", mock)
         r = client.post("/hosts/collect")
         assert r.status_code == 200
         mock.assert_called_once()
         assert b'id="hostTable"' in r.data
+        # OOB toast gives immediate feedback and schedules a one-shot refresh
+        assert b'id="toast"' in r.data and b'hx-swap-oob="true"' in r.data
+        assert b"Collection queued" in r.data
+        assert b'hx-get="/hosts/table"' in r.data and b'hx-trigger="load delay:3s"' in r.data
 
     def test_collect_survives_broker_error(self, client, monkeypatch):
         def boom():
@@ -64,6 +71,7 @@ class TestCollectTrigger:
         r = client.post("/hosts/collect")
         assert r.status_code == 200          # error is caught, table still rendered
         assert b'id="hostTable"' in r.data
+        assert b"Could not trigger collection" in r.data and b"alert-error" in r.data
 
 
 class TestScanTrigger:
@@ -76,7 +84,7 @@ class TestScanTrigger:
         assert b'id="imagesTable"' in r.data
         assert b"<html" not in r.data   # partial, not a full page
 
-    def test_scan_enqueues_trivy_and_xeol(self, client, monkeypatch):
+    def test_scan_enqueues_trivy_and_xeol_with_toast(self, client, monkeypatch):
         trivy = MagicMock()
         xeol = MagicMock()
         monkeypatch.setattr(tasks.trivy_background_task, "delay", trivy)
@@ -86,6 +94,8 @@ class TestScanTrigger:
         trivy.assert_called_once()
         xeol.assert_called_once()
         assert b'id="imagesTable"' in r.data
+        assert b'id="toast"' in r.data and b"Scan queued" in r.data
+        assert b'hx-get="/images/table"' in r.data
 
     def test_scan_survives_broker_error(self, client, monkeypatch):
         def boom():
@@ -95,6 +105,7 @@ class TestScanTrigger:
         r = client.post("/images/scan")
         assert r.status_code == 200
         assert b'id="imagesTable"' in r.data
+        assert b"Could not trigger scan" in r.data and b"alert-error" in r.data
 
 
 class TestSecurityHeaders:
