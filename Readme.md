@@ -38,6 +38,37 @@ internet, there must be a secure connection between the server and the agents. T
 sample agent and server setup. You can use it as a starting point. Please change the `HTTP_TOKEN` environment variable
 of the agent to a random string (at least 32 chars). Use the cli to add the agent to the server (see below).
 
+### Private registries
+
+Trivy and Xeol pull each image from its registry to scan it, so images from a **private registry**
+need credentials. Both scanners read a Docker `config.json`, so a single mounted file covers both.
+The scanners run in the **worker** container.
+
+1. Create the credentials file (on any machine):
+
+   ```bash
+   docker login registry.example.com          # writes ~/.docker/config.json
+   ```
+
+   or write it by hand — `{"auths":{"registry.example.com":{"auth":"<base64 of user:password>"}}}`.
+
+2. Mount it into the `worker` service at the path the scanners read (the container runs as user
+   `dockinv`). The dev compose already does this; for production, uncomment the line in
+   `docker-compose.yml`:
+
+   ```yaml
+   worker:
+     volumes:
+       - ~/.docker/config.json:/home/dockinv/.docker/config.json:ro
+   ```
+
+Images are matched to an `auths` entry by their registry host (e.g.
+`registry.example.com/app@sha256:…`), so no further configuration is needed. Two caveats:
+
+- the worker must be able to reach the registry host outbound (firewall / network policy);
+- for a self-signed registry certificate, provide its CA or set `TRIVY_INSECURE=true` (insecure,
+  last resort) on the worker.
+
 ## Web interface
 
 The server ships a web interface (by default at `http://localhost:8000`) that lists hosts, images and

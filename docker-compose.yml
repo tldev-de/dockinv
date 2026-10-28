@@ -45,6 +45,11 @@ services:
     volumes:
         - data:/data
         - /var/run/docker.sock:/var/run/docker.sock:ro
+        # Private registries: mount a Docker config.json with credentials so Trivy & Xeol
+        # can pull private images (both scanners read it). Create it with
+        # `docker login <registry>` (writes ~/.docker/config.json). See the
+        # "Private registries" section in the Readme.
+        # - ~/.docker/config.json:/home/dockinv/.docker/config.json:ro
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
