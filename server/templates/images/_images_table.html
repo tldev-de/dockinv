@@ -27,7 +27,7 @@
             <span class="opacity-40">not scanned</span>
             {% endif %}
         </td>
-        <td>
+        <td data-sort-value="{{ image.trivy_sort }}">
             {% if image.trivy_findings %}
             <span style="color: #b71c1c" title="Critical">{{ image.trivy_findings['critical'] }}</span> |
             <span style="color: #e65100" title="High">{{ image.trivy_findings['high'] }}</span> |

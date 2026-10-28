@@ -5,10 +5,11 @@
 {% endblock %}
 
 {% block filter_table %}containerTable{% endblock %}
-{% block filter_cols %}0,1,2,3{% endblock %}
+{% block filter_cols %}0,1,2,3,4{% endblock %}
 
 {% block body %}
 
+<div class="overflow-x-auto">
 <table class="table table-zebra" id="containerTable">
     <thead>
     <tr>
@@ -16,6 +17,7 @@
         <th>Stack</th>
         <th>Image Name / Tag</th>
         <th>Hostnames</th>
+        <th>Status</th>
         <th>Result of Xeol</th>
         <th>Result of Trivy</th>
     </tr>
@@ -38,6 +40,13 @@
                     {% else %}—{% endfor %}
                 </td>
                 <td>
+                    {% if container.status == 'running' %}
+                        <span class="badge badge-success badge-sm">{{ container.status }}</span>
+                    {% else %}
+                        <span class="badge badge-ghost badge-sm">{{ container.status or 'unknown' }}</span>
+                    {% endif %}
+                </td>
+                <td>
                     {% if container.image_eol == True %}
                         <span class="text-error">EOL</span>
                     {% elif container.image_eol == False %}
@@ -46,7 +55,7 @@
                         <span class="opacity-40">not scanned</span>
                     {% endif %}
                 </td>
-                <td>
+                <td data-sort-value="{{ container.trivy_sort }}">
                     {% if container.trivy_findings %}
                     <span style="color: #b71c1c" title="Critical">{{ container.trivy_findings['critical'] }}</span> |
                     <span style="color: #e65100" title="High">{{ container.trivy_findings['high'] }}</span> |
@@ -60,4 +69,5 @@
         {% endfor %}
     </tbody>
 </table>
+</div>
 {% endblock %}

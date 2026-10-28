@@ -36,7 +36,7 @@
             <td>{{ entry.docker_containers }}</td>
             <td>{{ entry.docker_images }}</td>
             <td>{{ entry.eol_images }}</td>
-            <td>
+            <td data-sort-value="{{ entry.trivy_sort }}">
                 <span style="color: #b71c1c" title="Critical">{{ entry.trivy_findings['critical'] }}</span> |
                 <span style="color: #e65100" title="High">{{ entry.trivy_findings['high'] }}</span> |
                 <span style="color: #fbc02d" title="Medium">{{ entry.trivy_findings['medium'] }}</span> |

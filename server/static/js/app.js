@@ -19,9 +19,13 @@
           const rows = Array.from(tbody.rows);
           sortDirection[idx] = sortDirection[idx] === "asc" ? "desc" : "asc";
           const dir = sortDirection[idx];
+          // A cell may carry an explicit data-sort-value (e.g. a composite weight
+          // for the multi-number Trivy column); fall back to its visible text.
+          const cellValue = (cell) =>
+            cell && cell.dataset.sortValue !== undefined ? cell.dataset.sortValue : (cell?.textContent.trim() ?? "");
           rows.sort((a, b) => {
-            const aText = a.cells[idx]?.textContent.trim() ?? "";
-            const bText = b.cells[idx]?.textContent.trim() ?? "";
+            const aText = cellValue(a.cells[idx]);
+            const bText = cellValue(b.cells[idx]);
             const aNum = parseFloat(aText.replace(/[^0-9.\-]/g, ""));
             const bNum = parseFloat(bText.replace(/[^0-9.\-]/g, ""));
             if (!isNaN(aNum) && !isNaN(bNum)) {

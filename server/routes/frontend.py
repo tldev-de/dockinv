@@ -59,6 +59,15 @@ def count_trivy_findings(host) -> TrivyFindings:
     return trivy_findings
 
 
+def trivy_sort_weight(findings):
+    """A single sortable integer so the multi-number Trivy column sorts by severity
+    priority (critical first). ``None`` (not scanned) sorts below any scanned image."""
+    if not findings:
+        return -1
+    return (findings.critical * 1_000_000_000 + findings.high * 1_000_000
+            + findings.medium * 1_000 + findings.low)
+
+
 def count_trivy_findings_image(image):
     if not image or not image.status_trivy:
         return None
@@ -194,6 +203,7 @@ def _hosts_overview():
             'docker_images': docker_images,
             'eol_images': eol_images,
             'trivy_findings': trivy_findings,
+            'trivy_sort': trivy_sort_weight(trivy_findings),
         })
     return data
 
@@ -240,14 +250,17 @@ def get_host(host_id):
     }
     for container in host.containers:
         image = container.image
+        findings = count_trivy_findings_image(image)
         data['containers'].append({
             'name': container.name,
             'id': container.id,
+            'status': container.status,
             'image': container.image_string,
             'image_id': container.image_id,
             'image_hash': container.image.repo_digest,
             'image_eol': is_image_eol(image),
-            'trivy_findings': count_trivy_findings_image(image),
+            'trivy_findings': findings,
+            'trivy_sort': trivy_sort_weight(findings),
             'stack': container.stack,
             'hostnames': container.hostnames.split(', ') if container.hostnames else [],
         })
@@ -350,6 +363,7 @@ def _images_overview():
             'repo_digest': image.repo_digest,
             'is_eol': is_image_eol(image),
             'trivy_findings': count_trivy_findings_image(image),
+            'trivy_sort': trivy_sort_weight(count_trivy_findings_image(image)),
             'scanned': humanize_age(image.updated_at),  # updated_at == last scan (never until first)
             'usage_count': len(image.containers),
         })

@@ -244,6 +244,31 @@ class TestFreshness:
         assert "No end-of-life components found" in html
 
 
+class TestTablePolish:
+    def test_host_detail_shows_container_status(self, client):
+        host, _ = seed()  # container seeded with status="running"
+        html = client.get(f"/hosts/{host.id}").data.decode()
+        assert "Status" in html                       # new column header
+        assert "badge-success" in html and "running" in html
+
+    def test_host_trivy_cell_has_sort_value(self, client):
+        host, image = seed()
+        image.status_trivy = {"Results": [{"Vulnerabilities": [{"Severity": "CRITICAL"}]}]}
+        image.save()
+        html = client.get(f"/hosts/{host.id}").data.decode()
+        assert 'data-sort-value="1000000000"' in html   # 1 critical -> severity-weighted
+
+    def test_images_trivy_cell_has_sort_value_when_unscanned(self, client):
+        seed()
+        html = client.get("/images").data.decode()
+        assert 'data-sort-value="-1"' in html           # not scanned sorts lowest
+
+    def test_tables_wrapped_for_mobile_overflow(self, client):
+        seed()
+        assert "overflow-x-auto" in client.get("/hosts").data.decode()
+        assert "overflow-x-auto" in client.get("/images").data.decode()
+
+
 def test_host_page_shows_critical_count_separately(client):
     # the aggregated Trivy view lists Critical as its own column (not folded into High)
     host, image = seed()

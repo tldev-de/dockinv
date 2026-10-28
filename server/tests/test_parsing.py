@@ -119,6 +119,19 @@ class TestHostAggregation:
         assert (f.critical, f.high, f.medium, f.low) == (0, 0, 0, 0)
 
 
+class TestTrivySortWeight:
+    def test_none_sorts_lowest(self):
+        assert frontend.trivy_sort_weight(None) == -1
+
+    def test_composite_value(self):
+        assert frontend.trivy_sort_weight(frontend.TrivyFindings(2, 3, 4, 5)) == 2_000_000_000 + 3_000_000 + 4_000 + 5
+
+    def test_one_critical_outranks_many_lower(self):
+        one_crit = frontend.trivy_sort_weight(frontend.TrivyFindings(1, 0, 0, 0))
+        many_low = frontend.trivy_sort_weight(frontend.TrivyFindings(0, 99, 99, 99))
+        assert one_crit > many_low   # severity priority, not raw counts
+
+
 class TestTransformForDisplay:
     def test_trivy_sorted_by_severity(self):
         out = frontend.transform_trivy_findings_for_display(img(trivy=TRIVY))
