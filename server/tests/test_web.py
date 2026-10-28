@@ -200,6 +200,50 @@ def test_host_page_shows_stack_and_hostnames(client):
     assert 'href="https://api.example"' in html
 
 
+class TestFreshness:
+    def test_images_list_marks_not_scanned(self, client):
+        seed()  # image has no status_trivy / status_xeol
+        html = client.get("/images").data.decode()
+        assert "not scanned" in html
+        assert "Last scanned" in html   # new column header
+        assert "never" in html          # updated_at is None -> "never"
+
+    def test_images_list_shows_scanned_state(self, client):
+        seed()
+        img = Image.query.first()
+        img.status_xeol = {"matches": []}
+        img.status_trivy = {"Results": []}
+        img.save()  # onupdate stamps updated_at -> "just now"
+        html = client.get("/images").data.decode()
+        assert "OK" in html             # xeol scanned & clean
+        assert "just now" in html       # last scanned is recent, not "never"
+
+    def test_host_detail_marks_not_scanned(self, client):
+        host, _ = seed()
+        html = client.get(f"/hosts/{host.id}").data.decode()
+        assert "not scanned" in html    # both xeol and trivy columns
+
+    def test_hosts_list_flags_stale_host(self, client):
+        seed()  # enabled host, last_seen is None (never collected)
+        html = client.get("/hosts").data.decode()
+        assert ">stale<" in html
+
+    def test_image_detail_not_scanned_states(self, client):
+        _, image = seed()
+        html = client.get(f"/images/{image.id}").data.decode()
+        assert "Not scanned by Trivy yet" in html
+        assert "Not scanned by Xeol yet" in html
+
+    def test_image_detail_clean_scan_states(self, client):
+        _, image = seed()
+        image.status_trivy = {"Results": []}
+        image.status_xeol = {"matches": []}
+        image.save()
+        html = client.get(f"/images/{image.id}").data.decode()
+        assert "No vulnerabilities found" in html
+        assert "No end-of-life components found" in html
+
+
 def test_host_page_shows_critical_count_separately(client):
     # the aggregated Trivy view lists Critical as its own column (not folded into High)
     host, image = seed()

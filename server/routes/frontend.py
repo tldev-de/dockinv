@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 
 from flask import render_template, Blueprint, request, flash, redirect, url_for
-from util import generate_random_string, cycle_is_eol, humanize_age
+from util import generate_random_string, cycle_is_eol, humanize_age, is_stale
+from config import Config
 from sqlalchemy import or_, func
 from sqlalchemy.orm import selectinload
 
@@ -172,9 +173,12 @@ def _hosts_overview():
         selectinload(Host.containers).selectinload(Container.image)
     ).all()
 
+    # An enabled host that hasn't reported within a few collection cycles is likely
+    # broken (agent down, token/network issue); flag it instead of showing a stale number.
+    stale_after = 3 * Config.TASK_DATA_COLLECTOR_INTERVAL  # minutes
+
     data = []
     for host in hosts:
-        last_call = host.last_seen  # None until the collector first reaches the agent
         docker_containers = len(host.containers)
         docker_images = len(set(container.image_id for container in host.containers))
         eol_images = count_eol_images(host)
@@ -184,7 +188,8 @@ def _hosts_overview():
             'id': host.id,
             'name': host.name,
             'enabled': host.enabled,
-            'last_successful_call': last_call,
+            'last_successful_call': humanize_age(host.last_seen),
+            'stale': host.enabled and is_stale(host.last_seen, stale_after),
             'docker_containers': docker_containers,
             'docker_images': docker_images,
             'eol_images': eol_images,
@@ -340,6 +345,7 @@ def _images_overview():
             'repo_digest': image.repo_digest,
             'is_eol': is_image_eol(image),
             'trivy_findings': count_trivy_findings_image(image),
+            'scanned': humanize_age(image.updated_at),  # updated_at == last scan (never until first)
             'usage_count': len(image.containers),
         })
     return data
@@ -384,6 +390,9 @@ def get_image_details(image_id):
         'name': image.name,
         'repo_digest': image.repo_digest,
         'is_eol': is_image_eol(image),
+        'scanned': humanize_age(image.updated_at),
+        'trivy_scanned': image.status_trivy is not None,
+        'xeol_scanned': image.status_xeol is not None,
     }
     trivy_findings = transform_trivy_findings_for_display(image)
     xeol_findings = transform_xeol_findings_for_display(image)

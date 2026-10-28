@@ -14,10 +14,16 @@
     <div>
         <span class="font-bold">EOL : </span>
         {% if image_data.is_eol == True %}
-            Yes
+            <span class="text-error">Yes</span>
         {% elif image_data.is_eol == False %}
             No
+        {% else %}
+            <span class="opacity-40">not scanned</span>
         {% endif %}
+    </div>
+    <div>
+        <span class="font-bold">Last scanned : </span>
+        {{ image_data.scanned }}
     </div>
 </div>
 <!-- container using image -->
@@ -75,7 +81,11 @@
         </tr>
     </thead>
     <tbody>
-    {% if trivy_findings != None %}
+    {% if not image_data.trivy_scanned %}
+        <tr><td colspan="6" class="opacity-60 py-4">Not scanned by Trivy yet.</td></tr>
+    {% elif not trivy_findings %}
+        <tr><td colspan="6" class="text-success py-4">No vulnerabilities found.</td></tr>
+    {% else %}
         {% for finding in trivy_findings %}
             <tr>
                 <td style="
@@ -126,7 +136,11 @@
             </tr>
         </thead>
         <tbody>
-        {% if xeol_findings != None %}
+        {% if not image_data.xeol_scanned %}
+            <tr><td colspan="5" class="opacity-60 py-4">Not scanned by Xeol yet.</td></tr>
+        {% elif not xeol_findings %}
+            <tr><td colspan="5" class="text-success py-4">No end-of-life components found.</td></tr>
+        {% else %}
             {% for finding in xeol_findings %}
                 <tr>
                     <td> {{ finding.Name }} </td>

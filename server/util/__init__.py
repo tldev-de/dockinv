@@ -58,6 +58,16 @@ def humanize_age(dt, now=None) -> str:
     return f"{hours // 24} d ago"
 
 
+def is_stale(dt, max_age_minutes, now=None) -> bool:
+    """Whether ``dt`` is older than ``max_age_minutes`` (or missing entirely)."""
+    if dt is None:
+        return True
+    now = now or datetime.now(timezone.utc)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return (now - dt).total_seconds() > max_age_minutes * 60
+
+
 def parse_xeol_to_str(status_xeol) -> str:
     if not status_xeol:
         return "n/a"

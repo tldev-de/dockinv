@@ -8,7 +8,7 @@ import pytest
 
 from routes import frontend
 from util import (parse_trivy_to_str, parse_xeol_to_str, generate_random_string,
-                  cycle_is_eol, humanize_age)
+                  cycle_is_eol, humanize_age, is_stale)
 
 FIX = os.path.join(os.path.dirname(__file__), "fixtures")
 
@@ -209,3 +209,20 @@ class TestHumanizeAge:
 
     def test_future_clamps_to_just_now(self):
         assert humanize_age(self.NOW + timedelta(minutes=5), now=self.NOW) == "just now"
+
+
+class TestIsStale:
+    NOW = datetime(2026, 1, 2, 12, 0, 0, tzinfo=timezone.utc)
+
+    def test_none_is_stale(self):
+        assert is_stale(None, 45) is True
+
+    def test_recent_not_stale(self):
+        assert is_stale(self.NOW - timedelta(minutes=10), 45, now=self.NOW) is False
+
+    def test_old_is_stale(self):
+        assert is_stale(self.NOW - timedelta(minutes=60), 45, now=self.NOW) is True
+
+    def test_naive_treated_as_utc(self):
+        naive = (self.NOW - timedelta(minutes=60)).replace(tzinfo=None)
+        assert is_stale(naive, 45, now=self.NOW) is True

@@ -38,10 +38,12 @@
                     {% else %}—{% endfor %}
                 </td>
                 <td>
-                    {% if container.image_eol %}
+                    {% if container.image_eol == True %}
                         <span class="text-error">EOL</span>
+                    {% elif container.image_eol == False %}
+                        <span class="text-success">OK</span>
                     {% else %}
-                        <span class="text-success"></span>
+                        <span class="opacity-40">not scanned</span>
                     {% endif %}
                 </td>
                 <td>
@@ -50,6 +52,8 @@
                     <span style="color: #e65100" title="High">{{ container.trivy_findings['high'] }}</span> |
                     <span style="color: #fbc02d" title="Medium">{{ container.trivy_findings['medium'] }}</span> |
                     <span style="color: #388e3c" title="Low">{{ container.trivy_findings['low'] }}</span>
+                    {% else %}
+                    <span class="opacity-40">not scanned</span>
                     {% endif %}
                 </td>
             </tr>

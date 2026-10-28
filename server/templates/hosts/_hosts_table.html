@@ -29,7 +29,10 @@
                     </svg>
                 {% endif %}
             </td>
-            <td>{{ entry.last_successful_call or 'never' }}</td>
+            <td>
+                {{ entry.last_successful_call }}
+                {% if entry.stale %}<span class="badge badge-error badge-sm ml-1" title="No successful collection in a while — check the agent">stale</span>{% endif %}
+            </td>
             <td>{{ entry.docker_containers }}</td>
             <td>{{ entry.docker_images }}</td>
             <td>{{ entry.eol_images }}</td>
