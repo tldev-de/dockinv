@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from flask import render_template, Blueprint, request, flash, redirect, url_for
-from util import generate_random_string, cycle_is_eol
+from util import generate_random_string, cycle_is_eol, humanize_age
 from sqlalchemy import or_, func
 from sqlalchemy.orm import selectinload
 
@@ -117,6 +117,54 @@ def transform_xeol_findings_for_display(image):
     return all_findings
 
 ######### Routes #########
+
+### Dashboard ###
+def _dashboard_overview():
+    hosts = Host.query.options(
+        selectinload(Host.containers).selectinload(Container.image)
+    ).all()
+    in_use_image_ids = {row[0] for row in db.session.query(Container.image_id).distinct()}
+    images = (Image.query.filter(Image.id.in_(in_use_image_ids)).all()
+              if in_use_image_ids else [])
+
+    # distinct CVEs per severity across in-use images (matches /vulnerabilities semantics)
+    sev_sets = {"CRITICAL": set(), "HIGH": set(), "MEDIUM": set(), "LOW": set()}
+    if in_use_image_ids:
+        for v in Vulnerability.query.filter(Vulnerability.image_id.in_(in_use_image_ids)).all():
+            if v.severity in sev_sets:
+                sev_sets[v.severity].add(v.cve_id)
+
+    worst = []
+    for img in images:
+        findings = count_trivy_findings_image(img)
+        eol = is_image_eol(img)
+        if findings is None and not eol:
+            continue  # not scanned and not EOL -> nothing to show
+        worst.append({'id': img.id, 'name': img.name, 'eol': eol,
+                      'findings': findings, 'usage': len(img.containers)})
+    worst.sort(key=lambda w: (w['findings'].critical if w['findings'] else 0,
+                              w['findings'].high if w['findings'] else 0,
+                              w['findings'].medium if w['findings'] else 0,
+                              bool(w['eol'])), reverse=True)
+
+    last_calls = [h.last_seen for h in hosts if h.last_seen]
+    return {
+        'host_total': len(hosts),
+        'host_enabled': sum(1 for h in hosts if h.enabled),
+        'never_reported': sum(1 for h in hosts if h.enabled and h.last_seen is None),
+        'container_total': Container.query.count(),
+        'image_total': len(images),
+        'eol_total': sum(1 for img in images if is_image_eol(img)),
+        'severities': {k.lower(): len(s) for k, s in sev_sets.items()},
+        'last_collection': humanize_age(max(last_calls)) if last_calls else None,
+        'worst_images': worst[:5],
+    }
+
+
+@frontend.route('/', methods=['GET'])
+def dashboard():
+    return render_template('index.html', data=_dashboard_overview())
+
 
 ### Hosts ###
 def _hosts_overview():

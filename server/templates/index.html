@@ -1,7 +1,99 @@
-{%  extends 'base.html.j2' %}
+{% extends 'base.html.j2' %}
 
-{% block page %}{% endblock %}
+{% block page %}Dashboard{% endblock %}
 
 {% block body %}
-    For instructions on how to add hosts, see the README
+{% if data.host_total == 0 %}
+    <div class="text-center opacity-70 py-16">
+        No hosts yet. <a href="/hosts/add" class="link">Add a host</a> to start collecting — see the README for agent setup.
+    </div>
+{% else %}
+
+<!-- Inventory totals -->
+<div class="stats stats-vertical sm:stats-horizontal shadow mb-6 w-full">
+    <a class="stat hover:bg-base-200" href="/hosts">
+        <div class="stat-title">Hosts</div>
+        <div class="stat-value text-2xl">{{ data.host_enabled }}<span class="text-base opacity-50"> / {{ data.host_total }}</span></div>
+        <div class="stat-desc">enabled / total</div>
+    </a>
+    <div class="stat">
+        <div class="stat-title">Containers</div>
+        <div class="stat-value text-2xl">{{ data.container_total }}</div>
+    </div>
+    <a class="stat hover:bg-base-200" href="/images">
+        <div class="stat-title">Images</div>
+        <div class="stat-value text-2xl">{{ data.image_total }}</div>
+        <div class="stat-desc">in use</div>
+    </a>
+    <a class="stat hover:bg-base-200" href="/images">
+        <div class="stat-title">EOL Images</div>
+        <div class="stat-value text-2xl {% if data.eol_total %}text-error{% endif %}">{{ data.eol_total }}</div>
+        <div class="stat-desc">end-of-life</div>
+    </a>
+</div>
+
+<!-- Open vulnerabilities by severity -->
+<div class="font-bold mb-2">Open vulnerabilities</div>
+<div class="flex flex-wrap gap-3 mb-8">
+    <a href="/vulnerabilities?severity=CRITICAL" class="card bg-base-200 hover:bg-base-300 px-5 py-3">
+        <div class="text-2xl font-bold" style="color: #b71c1c">{{ data.severities.critical }}</div>
+        <div class="text-sm opacity-70">Critical</div>
+    </a>
+    <a href="/vulnerabilities?severity=HIGH" class="card bg-base-200 hover:bg-base-300 px-5 py-3">
+        <div class="text-2xl font-bold" style="color: #e65100">{{ data.severities.high }}</div>
+        <div class="text-sm opacity-70">High</div>
+    </a>
+    <a href="/vulnerabilities?severity=MEDIUM" class="card bg-base-200 hover:bg-base-300 px-5 py-3">
+        <div class="text-2xl font-bold" style="color: #fbc02d">{{ data.severities.medium }}</div>
+        <div class="text-sm opacity-70">Medium</div>
+    </a>
+    <a href="/vulnerabilities?severity=LOW" class="card bg-base-200 hover:bg-base-300 px-5 py-3">
+        <div class="text-2xl font-bold" style="color: #388e3c">{{ data.severities.low }}</div>
+        <div class="text-sm opacity-70">Low</div>
+    </a>
+</div>
+
+<!-- Top problem images -->
+<div class="font-bold mb-2">Top problem images</div>
+<div class="overflow-x-auto mb-6">
+    <table class="table table-zebra">
+        <thead>
+            <tr>
+                <th>Image</th>
+                <th>EOL</th>
+                <th>Trivy (Crit / High / Med / Low)</th>
+                <th>Containers</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for w in data.worst_images %}
+            <tr class="hover" data-href="/images/{{ w.id }}" tabindex="0" role="link">
+                <td>{{ w.name }}</td>
+                <td>{% if w.eol %}<span class="text-error">EOL</span>{% else %}<span class="opacity-40">—</span>{% endif %}</td>
+                <td>
+                    {% if w.findings %}
+                    <span style="color: #b71c1c" title="Critical">{{ w.findings['critical'] }}</span> |
+                    <span style="color: #e65100" title="High">{{ w.findings['high'] }}</span> |
+                    <span style="color: #fbc02d" title="Medium">{{ w.findings['medium'] }}</span> |
+                    <span style="color: #388e3c" title="Low">{{ w.findings['low'] }}</span>
+                    {% else %}<span class="opacity-40">not scanned</span>{% endif %}
+                </td>
+                <td>{{ w.usage }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" class="text-center opacity-60 py-6">No scanned or end-of-life images yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Freshness -->
+<div class="text-sm opacity-70">
+    Last successful collection: <span class="font-medium">{{ data.last_collection or 'never' }}</span>
+    {% if data.never_reported %}
+        · <span class="text-warning">{{ data.never_reported }} enabled host(s) never reported</span>
+    {% endif %}
+</div>
+
+{% endif %}
 {% endblock %}

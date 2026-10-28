@@ -15,6 +15,23 @@ def seed():
     return host, image
 
 
+class TestDashboard:
+    def test_empty_state_without_hosts(self, client):
+        html = client.get("/").data.decode()
+        assert "Add a host" in html
+
+    def test_renders_totals_and_severity_links(self, client):
+        host, image = seed()
+        image.status_trivy = {"Results": [{"Vulnerabilities": [
+            {"Severity": "CRITICAL"}, {"Severity": "LOW"}]}]}
+        image.save()
+        html = client.get("/").data.decode()
+        assert "Containers" in html
+        assert "/vulnerabilities?severity=CRITICAL" in html   # severity card links to filtered list
+        assert "nginx" in html                                # top-problem image listed
+        assert 'title="Critical">1<' in html                  # its critical count
+
+
 class TestPages:
     def test_hosts(self, client):
         seed()

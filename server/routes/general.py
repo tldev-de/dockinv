@@ -1,4 +1,4 @@
-from flask import jsonify, Blueprint, render_template
+from flask import jsonify, Blueprint
 from sqlalchemy.sql import text
 from extensions import db
 import subprocess
@@ -9,10 +9,8 @@ from models.host import Host
 general = Blueprint('general', __name__, static_folder='../static')
 
 
-@general.route('/', methods=['GET'])
-def get_home():
-    return render_template("index.html")
-
+# The dashboard home page ('/') lives in the frontend blueprint, next to the
+# aggregation helpers it needs.
 
 # Scanner versions change only across deployments, so detect them once and cache
 # the result instead of forking two processes on every /health probe (every ~10s).

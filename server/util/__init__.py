@@ -1,6 +1,6 @@
 import secrets
 import string
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from tabulate import tabulate
 from extensions import db
@@ -34,6 +34,28 @@ def render_table(model: db.Model, obj: list) -> str:
 def generate_random_string(length: int) -> str:
     alphabet = string.ascii_letters + string.digits
     return ''.join(secrets.choice(alphabet) for _ in range(length))
+
+
+def humanize_age(dt, now=None) -> str:
+    """Human-readable relative age of ``dt`` (e.g. "5 min ago"), or "never" if None.
+
+    Timestamps from SQLite come back naive; they are treated as UTC.
+    """
+    if dt is None:
+        return "never"
+    now = now or datetime.now(timezone.utc)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    secs = max(0, int((now - dt).total_seconds()))
+    if secs < 60:
+        return "just now"
+    mins = secs // 60
+    if mins < 60:
+        return f"{mins} min ago"
+    hours = mins // 60
+    if hours < 24:
+        return f"{hours} h ago"
+    return f"{hours // 24} d ago"
 
 
 def parse_xeol_to_str(status_xeol) -> str:

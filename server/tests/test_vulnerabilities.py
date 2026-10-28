@@ -176,6 +176,21 @@ class TestRoutes:
         assert "CVE-FIXABLE" in html
         assert "CVE-NOFIX" not in html   # no fixed version -> hidden
 
+    def test_dashboard_overview_severity_counts(self, app):
+        self._seed_two()  # CVE-...618 CRITICAL (2 images), CVE-...619 HIGH
+        from routes.frontend import _dashboard_overview
+        d = _dashboard_overview()
+        assert d['host_total'] == 2
+        assert d['severities']['critical'] == 1   # distinct CVEs, not occurrences
+        assert d['severities']['high'] == 1
+        assert d['eol_total'] == 0
+
+    def test_dashboard_route_renders(self, client):
+        self._seed_two()
+        html = client.get("/").data.decode()
+        assert "/vulnerabilities?severity=CRITICAL" in html
+        assert "/vulnerabilities?severity=HIGH" in html
+
     def test_filter_by_cve(self, client):
         self._seed_two()
         html = client.get("/vulnerabilities?cve=109619").data.decode()

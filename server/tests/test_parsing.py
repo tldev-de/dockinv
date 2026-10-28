@@ -1,13 +1,14 @@
 """§2 – Unit tests for the Trivy/Xeol JSON parsing helpers (no DB required)."""
 import json
 import os
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
 
 from routes import frontend
-from util import parse_trivy_to_str, parse_xeol_to_str, generate_random_string, cycle_is_eol
+from util import (parse_trivy_to_str, parse_xeol_to_str, generate_random_string,
+                  cycle_is_eol, humanize_age)
 
 FIX = os.path.join(os.path.dirname(__file__), "fixtures")
 
@@ -182,3 +183,29 @@ class TestUtilStringHelpers:
     def test_generate_random_string(self):
         s = generate_random_string(32)
         assert len(s) == 32 and s.isalnum()
+
+
+class TestHumanizeAge:
+    NOW = datetime(2026, 1, 2, 12, 0, 0, tzinfo=timezone.utc)
+
+    def test_none(self):
+        assert humanize_age(None) == "never"
+
+    def test_just_now(self):
+        assert humanize_age(self.NOW - timedelta(seconds=10), now=self.NOW) == "just now"
+
+    def test_minutes(self):
+        assert humanize_age(self.NOW - timedelta(minutes=5), now=self.NOW) == "5 min ago"
+
+    def test_hours(self):
+        assert humanize_age(self.NOW - timedelta(hours=3), now=self.NOW) == "3 h ago"
+
+    def test_days(self):
+        assert humanize_age(self.NOW - timedelta(days=2), now=self.NOW) == "2 d ago"
+
+    def test_naive_timestamp_treated_as_utc(self):
+        naive = (self.NOW - timedelta(minutes=10)).replace(tzinfo=None)
+        assert humanize_age(naive, now=self.NOW) == "10 min ago"
+
+    def test_future_clamps_to_just_now(self):
+        assert humanize_age(self.NOW + timedelta(minutes=5), now=self.NOW) == "just now"
