@@ -171,6 +171,18 @@ def test_hosts_last_seen_shows_never_before_first_poll(client):
     assert b"never" in client.get("/hosts").data
 
 
+def test_host_page_shows_stack_and_hostnames(client):
+    host, _ = seed()
+    container = Container.query.first()
+    container.stack = "mystack"
+    container.hostnames = "app.example, api.example"
+    container.save()
+    html = client.get(f"/hosts/{host.id}").data.decode()
+    assert "mystack" in html
+    assert 'href="https://app.example"' in html    # rendered as a link
+    assert 'href="https://api.example"' in html
+
+
 def test_logout_clears_session(client):
     with client.session_transaction() as sess:
         sess["user"] = {"email": "user@example.com"}

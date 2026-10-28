@@ -18,6 +18,9 @@ class Container(db.Model, BaseModel):
     image_id: int = db.Column(db.Integer, db.ForeignKey('image.id'), nullable=False)
     image = db.relationship('Image', backref=db.backref('containers', lazy=True))
     status: str = db.Column(db.String(20), nullable=False)
+    # Derived from container labels by the collector.
+    stack: str = db.Column(db.String(254), nullable=True)            # com.docker.compose.project
+    hostnames: str = db.Column(db.String(512), nullable=True)        # Traefik Host() rules, comma-joined
     started_at: datetime = db.Column(db.DateTime, nullable=False)
     created_at: datetime = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at: datetime = db.Column(db.DateTime, nullable=True, onupdate=lambda: datetime.now(timezone.utc))

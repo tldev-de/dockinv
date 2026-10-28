@@ -21,9 +21,10 @@ def mk_host(name="h1", enabled=True):
 
 def payload(name="c1", image_name="nginx", image_tag="1.0",
             repo_digest="nginx@sha256:aaa", status="running",
-            started="2024-12-29T17:34:19.123456Z"):
+            started="2024-12-29T17:34:19.123456Z", labels=None):
     return {"name": name, "image_name": image_name, "image_tag": image_tag,
-            "repo_digest": repo_digest, "status": status, "started_at": started}
+            "repo_digest": repo_digest, "status": status, "started_at": started,
+            "labels": labels or {}}
 
 
 def mk_container(host, image, name="c1"):
@@ -52,6 +53,27 @@ def test_collector_sets_last_seen(app, run_task):
         run_task(tasks.data_collector_background_task)
     db.session.expire_all()  # task committed in its own session; drop stale cache
     assert Host.query.get(host.id).last_seen is not None
+
+
+def test_collector_stores_stack_and_hostnames(app, run_task):
+    mk_host()
+    labels = {"com.docker.compose.project": "myapp",
+              "traefik.http.routers.web.rule": "Host(`app.example`) || Host(`www.app.example`)"}
+    with requests_mock.Mocker() as m:
+        m.get(AGENT + "containers", json=[payload(labels=labels)])
+        run_task(tasks.data_collector_background_task)
+    c = Container.query.first()
+    assert c.stack == "myapp"
+    assert c.hostnames == "app.example, www.app.example"
+
+
+def test_collector_handles_missing_labels(app, run_task):
+    mk_host()
+    with requests_mock.Mocker() as m:
+        m.get(AGENT + "containers", json=[payload(labels={})])
+        run_task(tasks.data_collector_background_task)
+    c = Container.query.first()
+    assert c.stack is None and c.hostnames is None
 
 
 def test_collector_leaves_last_seen_on_failure(app, run_task):

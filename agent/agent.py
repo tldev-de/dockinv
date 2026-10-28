@@ -44,6 +44,7 @@ def get_docker_containers():
                 'repo_digest': image_digests.get(container.attrs['Image'], None), # repo digest, NOT image id
                 'status': container.status,
                 'started_at': container.attrs['State']['StartedAt'],
+                'labels': container.attrs.get('Config', {}).get('Labels') or {},
             })
         return jsonify(containers_info)
     except (docker.errors.APIError, docker.errors.DockerException) as e:

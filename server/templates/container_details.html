@@ -27,6 +27,14 @@
             <span class="font-bold">Status : </span>
             {{ container_data.status }}
         </div>
+        <div>
+            <span class="font-bold">Stack : </span>
+            {{ container_data.stack or '—' }}
+        </div>
+        <div>
+            <span class="font-bold">Hostnames : </span>
+            {% for h in container_data.hostnames %}<a href="https://{{ h }}" target="_blank" rel="noopener" class="underline">{{ h }}</a>{% if not loop.last %}, {% endif %}{% else %}—{% endfor %}
+        </div>
     </div>
        <div class="flex flex-col mb-6">
         <div>

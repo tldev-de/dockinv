@@ -5,29 +5,37 @@
 {% endblock %}
 
 {% block filter_table %}containerTable{% endblock %}
-{% block filter_cols %}0,1{% endblock %}
+{% block filter_cols %}0,1,2,3{% endblock %}
 
 {% block body %}
 
-<table class="table table-zebra table-fixed" id="containerTable">
+<table class="table table-zebra" id="containerTable">
     <thead>
     <tr>
-        <th class="w-1/4">Container Name</th>
-        <th class="w-2/4">Image Name / Tag</th>
-        <th class="w-1/8">Result of Xeol</th>
-        <th class="w-1/8">Result of Trivy</th>
+        <th>Container Name</th>
+        <th>Stack</th>
+        <th>Image Name / Tag</th>
+        <th>Hostnames</th>
+        <th>Result of Xeol</th>
+        <th>Result of Trivy</th>
     </tr>
     </thead>
     <tbody>
         {% for container in data.containers %}
             <tr class="hover" data-href="/container/{{ container.id }}" tabindex="0" role="link">
                 <td>{{ container.name }}</td>
+                <td>{{ container.stack or '—' }}</td>
                 <td>
                     <div class="tooltip" data-tip="{{ container.image_hash }}">
                         <a class="underline" href="/images/{{ container.image_id }}">
                             {{ container.image }}
                         </a>
                     </div>
+                </td>
+                <td class="text-sm">
+                    {% for h in container.hostnames %}
+                        <a class="underline" href="https://{{ h }}" target="_blank" rel="noopener">{{ h }}</a>{% if not loop.last %}<br/>{% endif %}
+                    {% else %}—{% endfor %}
                 </td>
                 <td>
                     {% if container.image_eol %}

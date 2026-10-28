@@ -11,6 +11,7 @@ from sqlalchemy import or_, null
 from config import Config
 from models import Image, Host, Container
 from tasklock import single_instance
+from labels import extract_stack, extract_hostnames
 
 # Broker is read from the environment so the web process can enqueue tasks (e.g.
 # the "Collect now" button) too, not just the CLI-started worker.
@@ -166,6 +167,10 @@ def data_collector_background_task():
                     container.image_id = image.id
                     container.status = c['status']
                     container.started_at = datetime.fromisoformat(c['started_at'])
+
+                hostnames = extract_hostnames(c.get('labels'))
+                container.stack = extract_stack(c.get('labels'))
+                container.hostnames = ', '.join(hostnames) if hostnames else None
                 container.save()
 
             # Remove containers that are no longer running on this host

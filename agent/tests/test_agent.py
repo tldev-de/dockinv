@@ -70,7 +70,8 @@ def test_containers_returns_payload(client, monkeypatch):
     container = MagicMock(id="c1", status="running")
     container.name = "web"  # `name=` kwarg is reserved by MagicMock, set explicitly
     container.attrs = {
-        "Config": {"Image": "registry:5000/nginx:1.2"},
+        "Config": {"Image": "registry:5000/nginx:1.2",
+                   "Labels": {"com.docker.compose.project": "web"}},
         "Image": "img1",
         "State": {"StartedAt": "2024-12-29T17:34:19Z"},
     }
@@ -86,6 +87,7 @@ def test_containers_returns_payload(client, monkeypatch):
     assert data[0]["image_tag"] == "1.2"
     assert data[0]["repo_digest"] == "nginx@sha256:aaa"
     assert data[0]["status"] == "running"
+    assert data[0]["labels"] == {"com.docker.compose.project": "web"}
 
 
 # --- /health ---------------------------------------------------------------

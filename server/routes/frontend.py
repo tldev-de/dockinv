@@ -185,6 +185,8 @@ def get_host(host_id):
             'image_hash': container.image.repo_digest,
             'image_eol': is_image_eol(image),
             'trivy_findings': count_trivy_findings_image(image),
+            'stack': container.stack,
+            'hostnames': container.hostnames.split(', ') if container.hostnames else [],
         })
 
     return render_template('hosts/host.html', data=data)
@@ -361,6 +363,8 @@ def get_container_details(container_id):
         'image_id': container.image_id,
         'host': container.host.name,
         'status': container.status,
+        'stack': container.stack,
+        'hostnames': container.hostnames.split(', ') if container.hostnames else [],
         'started_at': container.started_at,
         'created_at': container.created_at,
         'updated_at': container.updated_at,
