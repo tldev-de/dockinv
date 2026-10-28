@@ -14,15 +14,32 @@ from extensions import db
 from models import Image, Vulnerability
 
 
-# Vulnerability classes that let an attacker run code. Surfaced prominently so RCE
-# can be found fast amid the OS-package noise. Matched on Trivy CWE IDs first
-# (reliable), then on title/description phrasing as a fallback.
-_RCE_CWES = {"CWE-94", "CWE-95", "CWE-77", "CWE-78", "CWE-502", "CWE-917", "CWE-434"}
-_RCE_PHRASES = ("remote code execution", "arbitrary code execution", "code execution",
-                "arbitrary command", "command injection", "deserialization of untrusted data")
+# Remote code execution: an attacker runs code over the network. Flagged only when
+# BOTH hold, so the heuristic stays precise instead of over-counting:
+#   * a network attack vector (CVSS AV:N) — this rules out local / crafted-file
+#     "code execution" (binutils, imagemagick-via-file, m4, …) that is not remotely
+#     reachable and was the main source of false positives;
+#   * a code-execution CWE, or explicit RCE / command-injection wording.
+_RCE_CWES = {"CWE-94", "CWE-95", "CWE-77", "CWE-78", "CWE-502", "CWE-917", "CWE-1336"}
+_RCE_PHRASES = ("remote code execution", "arbitrary code execution",
+                "command injection", "deserialization of untrusted data")
+
+
+def _cvss_vectors(v):
+    """All CVSS vector strings across sources (V4/V3/V2)."""
+    out = []
+    for source in (v.get("CVSS") or {}).values():
+        if isinstance(source, dict):
+            for key in ("V4Vector", "V3Vector", "V2Vector"):
+                vec = source.get(key)
+                if isinstance(vec, str):
+                    out.append(vec)
+    return out
 
 
 def _is_rce(v):
+    if not any("AV:N" in vec for vec in _cvss_vectors(v)):
+        return False  # not network-reachable -> not a remote RCE for triage
     if any(c in _RCE_CWES for c in (v.get("CweIDs") or [])):
         return True
     text = f"{v.get('Title', '')} {v.get('Description', '')}".lower()

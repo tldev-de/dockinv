@@ -22,12 +22,18 @@ def make_image_with_container(host, name="nginx", digest=None, cname=None):
     return img
 
 
+_NETWORK_VECTOR = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+
+
 def vuln(cve, severity="HIGH", v3=9.2, pkg="libfoo", installed="1.0", fixed="1.1",
-         title=None, cwes=None):
+         title=None, cwes=None, cvss_vector=_NETWORK_VECTOR):
     d = {"VulnerabilityID": cve, "Severity": severity, "PkgName": pkg,
          "InstalledVersion": installed, "FixedVersion": fixed, "PrimaryURL": f"https://x/{cve}"}
     if v3 is not None:
-        d["CVSS"] = {"nvd": {"V3Score": v3}}
+        entry = {"V3Score": v3}
+        if cvss_vector:
+            entry["V3Vector"] = cvss_vector
+        d["CVSS"] = {"nvd": entry}
     if title is not None:
         d["Title"] = title
     if cwes is not None:
@@ -78,6 +84,19 @@ class TestExtraction:
     def test_extract_non_rce_is_false(self):
         rows = vuln_service.extract_vulnerabilities(trivy_blob(
             vuln("CVE-DOS", title="Denial of service", cwes=["CWE-400"])))
+        assert rows[0]["is_rce"] is False
+
+    def test_extract_rce_requires_network_vector(self):
+        # Code-exec CWE but a LOCAL attack vector -> not a remote RCE
+        rows = vuln_service.extract_vulnerabilities(trivy_blob(vuln(
+            "CVE-LOCAL", cwes=["CWE-94"],
+            cvss_vector="CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H")))
+        assert rows[0]["is_rce"] is False
+
+    def test_extract_bare_code_execution_not_flagged(self):
+        # "code execution" alone is too weak now; needs "remote/arbitrary ..."
+        rows = vuln_service.extract_vulnerabilities(trivy_blob(
+            vuln("CVE-WEAK", title="May lead to code execution in rare cases")))
         assert rows[0]["is_rce"] is False
 
 
