@@ -183,6 +183,17 @@ def test_host_page_shows_stack_and_hostnames(client):
     assert 'href="https://api.example"' in html
 
 
+def test_host_page_shows_critical_count_separately(client):
+    # the aggregated Trivy view lists Critical as its own column (not folded into High)
+    host, image = seed()
+    image.status_trivy = {"Results": [{"Vulnerabilities": [
+        {"Severity": "CRITICAL"}, {"Severity": "HIGH"}]}]}
+    image.save()
+    html = client.get(f"/hosts/{host.id}").data.decode()
+    assert 'title="Critical">1<' in html
+    assert 'title="High">1<' in html
+
+
 def test_logout_clears_session(client):
     with client.session_transaction() as sess:
         sess["user"] = {"email": "user@example.com"}

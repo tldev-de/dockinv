@@ -20,6 +20,7 @@ HOSTS_ROUTE = 'frontend.get_hosts'
 
 @dataclass
 class TrivyFindings:
+    critical: int
     high: int
     medium: int
     low: int
@@ -43,13 +44,14 @@ def is_image_eol(image):
 
 
 def count_trivy_findings(host) -> TrivyFindings:
-    trivy_findings = TrivyFindings(0, 0, 0)
+    trivy_findings = TrivyFindings(0, 0, 0, 0)
     counted_images = set()  # dedup per image so a shared image isn't counted twice
     for container in host.containers:
         image = container.image
         if image and image.status_trivy and image.id not in counted_images:
             counted_images.add(image.id)
             image_findings = count_trivy_findings_image(image)
+            trivy_findings.critical += image_findings.critical
             trivy_findings.high += image_findings.high
             trivy_findings.medium += image_findings.medium
             trivy_findings.low += image_findings.low
@@ -59,14 +61,16 @@ def count_trivy_findings(host) -> TrivyFindings:
 def count_trivy_findings_image(image):
     if not image or not image.status_trivy:
         return None
-    trivy_findings = TrivyFindings(0, 0, 0)
+    trivy_findings = TrivyFindings(0, 0, 0, 0)
     status_trivy = image.status_trivy
     results = status_trivy["Results"]
     for result in results:
         if "Vulnerabilities" in result:
             for vulnerability in result["Vulnerabilities"]:
                 severity = vulnerability["Severity"]
-                if severity == "HIGH" or severity == "CRITICAL":
+                if severity == "CRITICAL":
+                    trivy_findings.critical += 1
+                elif severity == "HIGH":
                     trivy_findings.high += 1
                 elif severity == "MEDIUM":
                     trivy_findings.medium += 1

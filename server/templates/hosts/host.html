@@ -46,9 +46,10 @@
                 </td>
                 <td>
                     {% if container.trivy_findings %}
-                    <span class="text-error">{{ container.trivy_findings['high'] }}</span> |
-                    <span class="text-warning">{{ container.trivy_findings['medium'] }}</span> |
-                    <span class="text-info">{{ container.trivy_findings['low'] }}</span>
+                    <span style="color: #b71c1c" title="Critical">{{ container.trivy_findings['critical'] }}</span> |
+                    <span style="color: #e65100" title="High">{{ container.trivy_findings['high'] }}</span> |
+                    <span style="color: #fbc02d" title="Medium">{{ container.trivy_findings['medium'] }}</span> |
+                    <span style="color: #388e3c" title="Low">{{ container.trivy_findings['low'] }}</span>
                     {% endif %}
                 </td>
             </tr>

@@ -64,9 +64,8 @@ def parse_trivy_to_str(status_trivy) -> str:
             if severity in severity_count:
                 severity_count[severity] += 1
 
-    # CRITICAL is folded into "High" to match the web view (count_trivy_findings_image).
-    high = severity_count["CRITICAL"] + severity_count["HIGH"]
+    critical, high = severity_count["CRITICAL"], severity_count["HIGH"]
     medium, low = severity_count["MEDIUM"], severity_count["LOW"]
-    if high + medium + low > 0:
-        return f"High: {high}, Medium: {medium}, Low: {low}"
+    if critical + high + medium + low > 0:
+        return f"Critical: {critical}, High: {high}, Medium: {medium}, Low: {low}"
     return "OK"

@@ -34,9 +34,10 @@
             <td>{{ entry.docker_images }}</td>
             <td>{{ entry.eol_images }}</td>
             <td>
-                <span class="text-error">{{ entry.trivy_findings['high'] }}</span> |
-                <span class="text-warning">{{ entry.trivy_findings['medium'] }}</span> |
-                <span class="text-info">{{ entry.trivy_findings['low'] }}</span>
+                <span style="color: #b71c1c" title="Critical">{{ entry.trivy_findings['critical'] }}</span> |
+                <span style="color: #e65100" title="High">{{ entry.trivy_findings['high'] }}</span> |
+                <span style="color: #fbc02d" title="Medium">{{ entry.trivy_findings['medium'] }}</span> |
+                <span style="color: #388e3c" title="Low">{{ entry.trivy_findings['low'] }}</span>
             </td>
             <td class="text-center">
                 <a href="/hosts/edit/{{ entry.id }}" class="btn btn-sm btn-primary">Edit</a>

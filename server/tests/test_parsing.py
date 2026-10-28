@@ -39,7 +39,7 @@ def xeol_with(eol, product="Redis", cycle="7.4", version="7.4.12"):
 class TestCountTrivyFindingsImage:
     def test_counts_crit_high_medium_low(self):
         f = frontend.count_trivy_findings_image(img(trivy=TRIVY))
-        assert (f.high, f.medium, f.low) == (2, 1, 2)  # CRITICAL+HIGH -> high
+        assert (f.critical, f.high, f.medium, f.low) == (1, 1, 1, 2)  # CRITICAL kept separate
 
     def test_none_when_no_status(self):
         assert frontend.count_trivy_findings_image(img(trivy=None)) is None
@@ -47,11 +47,11 @@ class TestCountTrivyFindingsImage:
 
     def test_empty_results(self):
         f = frontend.count_trivy_findings_image(img(trivy={"Results": []}))
-        assert (f.high, f.medium, f.low) == (0, 0, 0)
+        assert (f.critical, f.high, f.medium, f.low) == (0, 0, 0, 0)
 
     def test_result_without_vulnerabilities(self):
         f = frontend.count_trivy_findings_image(img(trivy={"Results": [{"Target": "x"}]}))
-        assert (f.high, f.medium, f.low) == (0, 0, 0)
+        assert (f.critical, f.high, f.medium, f.low) == (0, 0, 0, 0)
 
 
 class TestCycleIsEol:
@@ -106,16 +106,16 @@ class TestHostAggregation:
         # count_eol_images' dedup behaviour)
         shared = img(trivy=TRIVY)
         f = frontend.count_trivy_findings(host_with(shared, shared))
-        assert (f.high, f.medium, f.low) == (2, 1, 2)
+        assert (f.critical, f.high, f.medium, f.low) == (1, 1, 1, 2)
 
     def test_count_trivy_findings_sums_distinct_images(self):
         f = frontend.count_trivy_findings(host_with(img(image_id=1, trivy=TRIVY),
                                                      img(image_id=2, trivy=TRIVY)))
-        assert (f.high, f.medium, f.low) == (4, 2, 4)
+        assert (f.critical, f.high, f.medium, f.low) == (2, 2, 2, 4)
 
     def test_count_trivy_findings_ignores_images_without_status(self):
         f = frontend.count_trivy_findings(host_with(img(trivy=None)))
-        assert (f.high, f.medium, f.low) == (0, 0, 0)
+        assert (f.critical, f.high, f.medium, f.low) == (0, 0, 0, 0)
 
 
 class TestTransformForDisplay:
@@ -153,12 +153,12 @@ class TestTransformForDisplay:
 
 class TestUtilStringHelpers:
     def test_parse_trivy_to_str_counts(self):
-        # CRITICAL is folded into "High" (same as the web view).
-        assert parse_trivy_to_str(TRIVY) == "High: 2, Medium: 1, Low: 2"
+        # CRITICAL is reported separately (same as the web view).
+        assert parse_trivy_to_str(TRIVY) == "Critical: 1, High: 1, Medium: 1, Low: 2"
 
     def test_parse_trivy_to_str_counts_critical_only(self):
         trivy = {"Results": [{"Vulnerabilities": [{"Severity": "CRITICAL"}]}]}
-        assert parse_trivy_to_str(trivy) == "High: 1, Medium: 0, Low: 0"
+        assert parse_trivy_to_str(trivy) == "Critical: 1, High: 0, Medium: 0, Low: 0"
 
     def test_parse_trivy_to_str_na(self):
         assert parse_trivy_to_str(None) == "n/a"
