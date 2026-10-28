@@ -40,6 +40,9 @@
                 {% for h in r.hostnames %}
                     <br/><a class="text-warning text-xs underline" href="https://{{ h }}" target="_blank" rel="noopener">↗ {{ h }}</a>
                 {% endfor %}
+                {% for p in r.ports %}
+                    <br/><span class="text-warning text-xs">⇄ {{ p }}</span>
+                {% endfor %}
             </td>
             <td><a href="/images/{{ r.image_id }}" class="underline">{{ r.image }}</a></td>
             <td>{{ r.pkg }}</td>

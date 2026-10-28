@@ -74,6 +74,11 @@ def test_containers_returns_payload(client, monkeypatch):
                    "Labels": {"com.docker.compose.project": "web"}},
         "Image": "img1",
         "State": {"StartedAt": "2024-12-29T17:34:19Z"},
+        "NetworkSettings": {"Ports": {
+            "80/tcp": [{"HostIp": "0.0.0.0", "HostPort": "8080"}],
+            "443/tcp": [{"HostIp": "127.0.0.1", "HostPort": "8443"}],  # loopback -> skipped
+            "9000/tcp": None,                                          # not published -> skipped
+        }},
     }
     docker_client = MagicMock()
     docker_client.containers.list.return_value = [container]
@@ -88,6 +93,22 @@ def test_containers_returns_payload(client, monkeypatch):
     assert data[0]["repo_digest"] == "nginx@sha256:aaa"
     assert data[0]["status"] == "running"
     assert data[0]["labels"] == {"com.docker.compose.project": "web"}
+    assert data[0]["ports"] == ["8080->80/tcp"]   # only the externally-published binding
+
+
+def test_published_ports_filters_loopback_and_unpublished():
+    attrs = {"NetworkSettings": {"Ports": {
+        "80/tcp": [{"HostIp": "0.0.0.0", "HostPort": "8080"}],
+        "81/tcp": [{"HostIp": "", "HostPort": "8081"}],          # all-interfaces -> kept
+        "443/tcp": [{"HostIp": "127.0.0.1", "HostPort": "8443"}],  # loopback -> skipped
+        "9000/tcp": None,                                          # unpublished -> skipped
+    }}}
+    assert agent_module.published_ports(attrs) == ["8080->80/tcp", "8081->81/tcp"]
+
+
+def test_published_ports_empty():
+    assert agent_module.published_ports({}) == []
+    assert agent_module.published_ports({"NetworkSettings": {"Ports": {}}}) == []
 
 
 # --- /health ---------------------------------------------------------------

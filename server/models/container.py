@@ -21,6 +21,7 @@ class Container(db.Model, BaseModel):
     # Derived from container labels by the collector.
     stack: str = db.Column(db.String(254), nullable=True)            # com.docker.compose.project
     hostnames: str = db.Column(db.String(512), nullable=True)        # Traefik Host() rules, comma-joined
+    ports: str = db.Column(db.String(512), nullable=True)            # published host ports, comma-joined
     started_at: datetime = db.Column(db.DateTime, nullable=False)
     created_at: datetime = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at: datetime = db.Column(db.DateTime, nullable=True, onupdate=lambda: datetime.now(timezone.utc))

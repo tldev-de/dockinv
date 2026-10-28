@@ -36,7 +36,7 @@
 <div class="font-bold mb-2">Open vulnerabilities</div>
 {% if data.exposed_critical or data.exposed_rce %}
 <a href="/vulnerabilities?exposed=1" class="alert alert-warning mb-4 block hover:opacity-90" role="alert">
-    <span>⚠ <span class="font-bold">Exposed attack surface</span> (reachable via Traefik):
+    <span>⚠ <span class="font-bold">Exposed attack surface</span> (Traefik host or published port):
         <span class="font-bold">{{ data.exposed_critical }}</span> Critical ·
         <span class="font-bold">{{ data.exposed_rce }}</span> RCE — prioritise these.</span>
 </a>

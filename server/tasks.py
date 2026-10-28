@@ -171,6 +171,8 @@ def data_collector_background_task():
                 hostnames = extract_hostnames(c.get('labels'))
                 container.stack = extract_stack(c.get('labels'))
                 container.hostnames = ', '.join(hostnames) if hostnames else None
+                ports = c.get('ports') or []
+                container.ports = ', '.join(ports) if ports else None
                 container.save()
 
             # Remove containers that are no longer running on this host

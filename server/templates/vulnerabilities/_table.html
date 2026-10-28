@@ -17,7 +17,7 @@
             <td>
                 {{ v.id }}
                 {% if v.is_rce %}<span class="badge badge-error badge-sm ml-1" title="Remote code execution class">RCE</span>{% endif %}
-                {% if v.exposed %}<span class="badge badge-warning badge-sm ml-1" title="Reachable via Traefik: {{ v.hostnames }}">exposed</span>{% endif %}
+                {% if v.exposed %}<span class="badge badge-warning badge-sm ml-1" title="Reachable: {{ v.exposure }}">exposed</span>{% endif %}
             </td>
             <td><span class="{{ sev(v.severity) }}">{{ v.severity }}</span></td>
             <td>{{ score(v.score) }}</td>

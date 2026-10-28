@@ -45,6 +45,7 @@ def get_docker_containers():
                 'status': container.status,
                 'started_at': container.attrs['State']['StartedAt'],
                 'labels': container.attrs.get('Config', {}).get('Labels') or {},
+                'ports': published_ports(container.attrs),
             })
         return jsonify(containers_info)
     except (docker.errors.APIError, docker.errors.DockerException) as e:
@@ -59,6 +60,25 @@ def get_health():
         return jsonify({'status': 'ok', 'message': 'docker is accessible'})
     except (docker.errors.APIError, docker.errors.DockerException) as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+def published_ports(attrs):
+    """Host-published port bindings as ``"<hostport>-><containerport>"`` strings.
+
+    Only externally reachable bindings count toward attack surface, so bindings to
+    loopback (``127.0.0.1`` / ``::1``) are skipped. A ``null`` binding means the port
+    is merely exposed in the image, not published to the host — also skipped.
+    """
+    out = []
+    ports = (attrs.get('NetworkSettings') or {}).get('Ports') or {}
+    for container_port, bindings in ports.items():
+        for binding in (bindings or []):
+            if (binding.get('HostIp') or '') in ('127.0.0.1', '::1'):
+                continue
+            host_port = binding.get('HostPort')
+            if host_port:
+                out.append(f'{host_port}->{container_port}')
+    return out
 
 
 def split_image_ref(ref):

@@ -14,12 +14,13 @@ def make_host(name="h1"):
     return h
 
 
-def make_image_with_container(host, name="nginx", digest=None, cname=None, hostnames=None):
+def make_image_with_container(host, name="nginx", digest=None, cname=None,
+                              hostnames=None, ports=None):
     img = Image(name=name, repo_digest=digest or f"{name}@sha256:{host.id}")
     img.save()
     Container(host_id=host.id, name=cname or f"c-{name}", image_string=f"{name}:1",
               image_id=img.id, status="running", started_at=datetime.now(timezone.utc),
-              hostnames=hostnames).save()
+              hostnames=hostnames, ports=ports).save()
     return img
 
 
@@ -275,10 +276,20 @@ class TestRoutes:
         self._seed_exposed_and_internal()
         html = client.get("/vulnerabilities").data.decode()
         assert "CVE-EXPOSED" in html and "CVE-INTERNAL" in html
-        assert 'title="Reachable via Traefik: app.example">exposed' in html
+        assert 'title="Reachable: app.example">exposed' in html
         only = client.get("/vulnerabilities?exposed=1").data.decode()
         assert "CVE-EXPOSED" in only
         assert "CVE-INTERNAL" not in only   # internal image filtered out
+
+    def test_published_port_counts_as_exposed(self, client):
+        host = make_host("hp")
+        img = make_image_with_container(host, "pimg", "pimg@sha256:1", "c-p",
+                                        ports="8080->80/tcp")
+        vuln_service.set_trivy_result(img, trivy_blob(vuln("CVE-PORT", severity="CRITICAL")))
+        only = client.get("/vulnerabilities?exposed=1").data.decode()
+        assert "CVE-PORT" in only
+        assert ">exposed<" in only
+        assert "8080-&gt;80/tcp" in only   # port shown in tooltip ('>' is HTML-escaped)
 
     def test_filter_controls_include_exposed(self, client):
         assert 'name="exposed"' in client.get("/vulnerabilities").data.decode()

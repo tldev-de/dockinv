@@ -140,7 +140,7 @@ def _dashboard_overview():
     # distinct CVEs per severity across in-use images (matches /vulnerabilities semantics),
     # plus the subset on Traefik-reachable ("exposed") images — the attackable surface.
     sev_sets = {"CRITICAL": set(), "HIGH": set(), "MEDIUM": set(), "LOW": set()}
-    exposed_ids = set(_image_hostnames())
+    exposed_ids = set(_image_exposure())
     exposed_critical, exposed_rce = set(), set()
     if in_use_image_ids:
         for v in Vulnerability.query.filter(Vulnerability.image_id.in_(in_use_image_ids)).all():
@@ -506,14 +506,16 @@ def _parse_vuln_filters(args):
     return cve, severity, min_cvss, only_fixable, hide_kernel, rce_only, exposed_only
 
 
-def _image_hostnames():
-    """image_id -> set of Traefik hostnames. An image is 'exposed' if any of its
-    containers advertises a Host() rule, i.e. it is reachable via Traefik."""
+def _image_exposure():
+    """image_id -> set of externally-reachable endpoints (Traefik hostnames and
+    published host ports). An image is 'exposed' if any of its containers has one."""
     mapping = {}
-    for image_id, hn in (db.session.query(Container.image_id, Container.hostnames)
-                         .filter(Container.hostnames.isnot(None), Container.hostnames != '')):
-        mapping.setdefault(image_id, set()).update(
-            h.strip() for h in hn.split(',') if h.strip())
+    for image_id, hostnames, ports in db.session.query(
+            Container.image_id, Container.hostnames, Container.ports):
+        for field in (hostnames, ports):
+            if field:
+                mapping.setdefault(image_id, set()).update(
+                    t.strip() for t in field.split(',') if t.strip())
     return mapping
 
 
@@ -525,7 +527,7 @@ def _vulnerabilities_overview(cve='', severity='', min_cvss=None, only_fixable=F
         .group_by(Container.image_id).all()
     )
     image_names = dict(db.session.query(Image.id, Image.name).all())
-    image_hostnames = _image_hostnames()
+    image_exposure = _image_exposure()
 
     query = Vulnerability.query
     if cve:
@@ -540,10 +542,10 @@ def _vulnerabilities_overview(cve='', severity='', min_cvss=None, only_fixable=F
         entry = agg.get(v.cve_id)
         if entry is None:
             entry = agg[v.cve_id] = {'id': v.cve_id, 'severity': v.severity, 'score': v.score,
-                                     'images': set(), 'packages': set(), 'hostnames': set(),
+                                     'images': set(), 'packages': set(), 'exposure': set(),
                                      'fixable': False, 'is_rce': False}
         entry['images'].add(v.image_id)
-        entry['hostnames'].update(image_hostnames.get(v.image_id, ()))
+        entry['exposure'].update(image_exposure.get(v.image_id, ()))
         if v.pkg_name:
             entry['packages'].add(v.pkg_name)
         entry['fixable'] = entry['fixable'] or bool(v.fixed_version)
@@ -555,7 +557,7 @@ def _vulnerabilities_overview(cve='', severity='', min_cvss=None, only_fixable=F
 
     data = []
     for e in agg.values():
-        exposed = bool(e['hostnames'])
+        exposed = bool(e['exposure'])
         if severity and _rank(e['severity']) > _rank(severity):
             continue  # keep only CVEs at or above the selected minimum severity
         if min_cvss is not None and (e['score'] is None or e['score'] < min_cvss):
@@ -569,7 +571,7 @@ def _vulnerabilities_overview(cve='', severity='', min_cvss=None, only_fixable=F
         data.append({
             'id': e['id'], 'severity': e['severity'], 'score': e['score'],
             'fixable': e['fixable'], 'is_rce': e['is_rce'],
-            'exposed': exposed, 'hostnames': ', '.join(sorted(e['hostnames'])),
+            'exposed': exposed, 'exposure': ', '.join(sorted(e['exposure'])),
             'packages': ', '.join(sorted(e['packages'])),
             'images': ', '.join(sorted({image_names.get(i, '?') for i in e['images']})),
             'image_count': len(e['images']),
@@ -631,6 +633,7 @@ def get_vulnerability_detail(cve_id):
                 'severity': v.severity,
                 'score': v.score,
                 'hostnames': container.hostnames.split(', ') if container.hostnames else [],
+                'ports': container.ports.split(', ') if container.ports else [],
             })
 
     if not rows:

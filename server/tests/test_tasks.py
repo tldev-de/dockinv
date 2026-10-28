@@ -21,10 +21,10 @@ def mk_host(name="h1", enabled=True):
 
 def payload(name="c1", image_name="nginx", image_tag="1.0",
             repo_digest="nginx@sha256:aaa", status="running",
-            started="2024-12-29T17:34:19.123456Z", labels=None):
+            started="2024-12-29T17:34:19.123456Z", labels=None, ports=None):
     return {"name": name, "image_name": image_name, "image_tag": image_tag,
             "repo_digest": repo_digest, "status": status, "started_at": started,
-            "labels": labels or {}}
+            "labels": labels or {}, "ports": ports or []}
 
 
 def mk_container(host, image, name="c1"):
@@ -73,7 +73,16 @@ def test_collector_handles_missing_labels(app, run_task):
         m.get(AGENT + "containers", json=[payload(labels={})])
         run_task(tasks.data_collector_background_task)
     c = Container.query.first()
-    assert c.stack is None and c.hostnames is None
+    assert c.stack is None and c.hostnames is None and c.ports is None
+
+
+def test_collector_stores_published_ports(app, run_task):
+    mk_host()
+    with requests_mock.Mocker() as m:
+        m.get(AGENT + "containers", json=[payload(ports=["8080->80/tcp", "8443->443/tcp"])])
+        run_task(tasks.data_collector_background_task)
+    c = Container.query.first()
+    assert c.ports == "8080->80/tcp, 8443->443/tcp"
 
 
 def test_collector_leaves_last_seen_on_failure(app, run_task):
