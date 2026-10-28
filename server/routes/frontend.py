@@ -465,6 +465,20 @@ def _rank(severity):
     return _SEVERITY_RANK.get(severity, 4)
 
 
+# Kernel-header packages: Trivy reports their CVEs because the package is present,
+# but a container uses the host kernel, so these are neither exploitable nor fixable
+# at the image level. Hidden by default to keep the list actionable.
+_KERNEL_PKG_PREFIXES = ('linux-libc-dev', 'linux-headers', 'linux-image')
+
+
+def _is_kernel_pkg(name):
+    return bool(name) and name.startswith(_KERNEL_PKG_PREFIXES)
+
+
+def _truthy(value):
+    return (value or '').strip().lower() in ('1', 'true', 'on', 'yes')
+
+
 def _parse_vuln_filters(args):
     cve = (args.get('cve') or '').strip()
     severity = (args.get('severity') or '').strip().upper()
@@ -473,11 +487,16 @@ def _parse_vuln_filters(args):
         min_cvss = float(raw_cvss) if raw_cvss else None
     except ValueError:
         min_cvss = None
-    only_fixable = (args.get('fixable') or '').strip().lower() in ('1', 'true', 'on', 'yes')
-    return cve, severity, min_cvss, only_fixable
+    only_fixable = _truthy(args.get('fixable'))
+    rce_only = _truthy(args.get('rce'))
+    # Kernel noise is hidden unless explicitly shown, so a bare page load (no params)
+    # already yields a de-noised list; `show_kernel` is a normal default-off checkbox.
+    hide_kernel = not _truthy(args.get('show_kernel'))
+    return cve, severity, min_cvss, only_fixable, hide_kernel, rce_only
 
 
-def _vulnerabilities_overview(cve='', severity='', min_cvss=None, only_fixable=False):
+def _vulnerabilities_overview(cve='', severity='', min_cvss=None, only_fixable=False,
+                              hide_kernel=True, rce_only=False):
     # Only images that actually run somewhere count as "vulnerable containers".
     container_counts = dict(
         db.session.query(Container.image_id, func.count(Container.id))
@@ -493,14 +512,18 @@ def _vulnerabilities_overview(cve='', severity='', min_cvss=None, only_fixable=F
     for v in query.all():
         if container_counts.get(v.image_id, 0) == 0:
             continue
+        if hide_kernel and _is_kernel_pkg(v.pkg_name):
+            continue  # drop unactionable kernel-header rows (CVE vanishes if kernel-only)
         entry = agg.get(v.cve_id)
         if entry is None:
             entry = agg[v.cve_id] = {'id': v.cve_id, 'severity': v.severity, 'score': v.score,
-                                     'images': set(), 'packages': set(), 'fixable': False}
+                                     'images': set(), 'packages': set(),
+                                     'fixable': False, 'is_rce': False}
         entry['images'].add(v.image_id)
         if v.pkg_name:
             entry['packages'].add(v.pkg_name)
         entry['fixable'] = entry['fixable'] or bool(v.fixed_version)
+        entry['is_rce'] = entry['is_rce'] or bool(v.is_rce)
         if _rank(v.severity) < _rank(entry['severity']):
             entry['severity'] = v.severity
         if v.score is not None and (entry['score'] is None or v.score > entry['score']):
@@ -514,33 +537,38 @@ def _vulnerabilities_overview(cve='', severity='', min_cvss=None, only_fixable=F
             continue
         if only_fixable and not e['fixable']:
             continue  # keep only CVEs with a fixed version available somewhere
+        if rce_only and not e['is_rce']:
+            continue  # keep only remote-code-execution class CVEs
         data.append({
             'id': e['id'], 'severity': e['severity'], 'score': e['score'],
-            'fixable': e['fixable'],
+            'fixable': e['fixable'], 'is_rce': e['is_rce'],
             'packages': ', '.join(sorted(e['packages'])),
             'images': ', '.join(sorted({image_names.get(i, '?') for i in e['images']})),
             'image_count': len(e['images']),
             'container_count': sum(container_counts[i] for i in e['images']),
         })
-    data.sort(key=lambda d: (d['score'] is None, -(d['score'] or 0), _rank(d['severity']), d['id']))
+    # RCE first, then by score/severity — so the dangerous ones surface at the top.
+    data.sort(key=lambda d: (not d['is_rce'], d['score'] is None, -(d['score'] or 0),
+                             _rank(d['severity']), d['id']))
     return data
 
 
 @frontend.route('/vulnerabilities', methods=['GET'])
 def get_vulnerabilities():
-    cve, severity, min_cvss, only_fixable = _parse_vuln_filters(request.args)
-    data = _vulnerabilities_overview(cve, severity, min_cvss, only_fixable)
+    cve, severity, min_cvss, only_fixable, hide_kernel, rce_only = _parse_vuln_filters(request.args)
+    data = _vulnerabilities_overview(cve, severity, min_cvss, only_fixable, hide_kernel, rce_only)
     return render_template('vulnerabilities/list.html', data=data,
                            cve=cve, severity=severity, min_cvss=request.args.get('min_cvss', ''),
-                           fixable=only_fixable)
+                           fixable=only_fixable, show_kernel=not hide_kernel, rce=rce_only)
 
 
 @frontend.route('/vulnerabilities/table', methods=['GET'])
 def get_vulnerabilities_table():
     """HTMX partial: the filtered vulnerability table."""
-    cve, severity, min_cvss, only_fixable = _parse_vuln_filters(request.args)
+    cve, severity, min_cvss, only_fixable, hide_kernel, rce_only = _parse_vuln_filters(request.args)
     return render_template('vulnerabilities/_table.html',
-                           data=_vulnerabilities_overview(cve, severity, min_cvss, only_fixable))
+                           data=_vulnerabilities_overview(cve, severity, min_cvss, only_fixable,
+                                                          hide_kernel, rce_only))
 
 
 @frontend.route('/vulnerabilities/<cve_id>', methods=['GET'])

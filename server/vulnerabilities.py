@@ -14,6 +14,21 @@ from extensions import db
 from models import Image, Vulnerability
 
 
+# Vulnerability classes that let an attacker run code. Surfaced prominently so RCE
+# can be found fast amid the OS-package noise. Matched on Trivy CWE IDs first
+# (reliable), then on title/description phrasing as a fallback.
+_RCE_CWES = {"CWE-94", "CWE-95", "CWE-77", "CWE-78", "CWE-502", "CWE-917", "CWE-434"}
+_RCE_PHRASES = ("remote code execution", "arbitrary code execution", "code execution",
+                "arbitrary command", "command injection", "deserialization of untrusted data")
+
+
+def _is_rce(v):
+    if any(c in _RCE_CWES for c in (v.get("CweIDs") or [])):
+        return True
+    text = f"{v.get('Title', '')} {v.get('Description', '')}".lower()
+    return any(p in text for p in _RCE_PHRASES)
+
+
 def _cvss_score(vuln):
     """Pick a representative CVSS score: highest V4/V3 across sources, else V2."""
     cvss = vuln.get("CVSS") or {}
@@ -45,6 +60,7 @@ def extract_vulnerabilities(status_trivy):
                 "installed_version": v.get("InstalledVersion"),
                 "fixed_version": v.get("FixedVersion"),
                 "primary_url": v.get("PrimaryURL"),
+                "is_rce": _is_rce(v),
             }
             key = _key(row)
             if key in seen:

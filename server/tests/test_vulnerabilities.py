@@ -22,11 +22,16 @@ def make_image_with_container(host, name="nginx", digest=None, cname=None):
     return img
 
 
-def vuln(cve, severity="HIGH", v3=9.2, pkg="libfoo", installed="1.0", fixed="1.1"):
+def vuln(cve, severity="HIGH", v3=9.2, pkg="libfoo", installed="1.0", fixed="1.1",
+         title=None, cwes=None):
     d = {"VulnerabilityID": cve, "Severity": severity, "PkgName": pkg,
          "InstalledVersion": installed, "FixedVersion": fixed, "PrimaryURL": f"https://x/{cve}"}
     if v3 is not None:
         d["CVSS"] = {"nvd": {"V3Score": v3}}
+    if title is not None:
+        d["Title"] = title
+    if cwes is not None:
+        d["CweIDs"] = cwes
     return d
 
 
@@ -60,6 +65,20 @@ class TestExtraction:
     def test_extract_empty(self):
         assert vuln_service.extract_vulnerabilities(None) == []
         assert vuln_service.extract_vulnerabilities({"Results": []}) == []
+
+    def test_extract_flags_rce_by_cwe(self):
+        rows = vuln_service.extract_vulnerabilities(trivy_blob(vuln("CVE-RCE", cwes=["CWE-94"])))
+        assert rows[0]["is_rce"] is True
+
+    def test_extract_flags_rce_by_title(self):
+        rows = vuln_service.extract_vulnerabilities(trivy_blob(
+            vuln("CVE-RCE2", title="Allows remote code execution via crafted input")))
+        assert rows[0]["is_rce"] is True
+
+    def test_extract_non_rce_is_false(self):
+        rows = vuln_service.extract_vulnerabilities(trivy_blob(
+            vuln("CVE-DOS", title="Denial of service", cwes=["CWE-400"])))
+        assert rows[0]["is_rce"] is False
 
 
 # --- atomic sync / no drift ------------------------------------------------
@@ -190,6 +209,38 @@ class TestRoutes:
         html = client.get("/").data.decode()
         assert "/vulnerabilities?severity=CRITICAL" in html
         assert "/vulnerabilities?severity=HIGH" in html
+
+    def _seed_kernel_and_rce(self, suffix="k"):
+        host = make_host(f"h{suffix}")
+        img = make_image_with_container(host, f"i{suffix}", f"i{suffix}@sha256:5", f"c-{suffix}")
+        vuln_service.set_trivy_result(img, trivy_blob(
+            vuln("CVE-KERNEL", pkg="linux-libc-dev", severity="HIGH", v3=7.0),
+            vuln("CVE-RCE", pkg="libfoo", severity="CRITICAL", v3=9.8, cwes=["CWE-94"]),
+            vuln("CVE-PLAIN", pkg="libbar", severity="MEDIUM", v3=5.0)))
+        return img
+
+    def test_kernel_noise_hidden_by_default(self, client):
+        self._seed_kernel_and_rce()
+        html = client.get("/vulnerabilities").data.decode()
+        assert "CVE-KERNEL" not in html     # linux-libc-dev dropped
+        assert "CVE-RCE" in html
+
+    def test_show_kernel_noise_when_requested(self, client):
+        self._seed_kernel_and_rce("k2")
+        html = client.get("/vulnerabilities?show_kernel=1").data.decode()
+        assert "CVE-KERNEL" in html
+
+    def test_rce_badge_and_only_filter(self, client):
+        self._seed_kernel_and_rce("k3")
+        html = client.get("/vulnerabilities").data.decode()
+        assert 'title="Remote code execution class">RCE<' in html   # badge rendered
+        only = client.get("/vulnerabilities?rce=1").data.decode()
+        assert "CVE-RCE" in only
+        assert "CVE-PLAIN" not in only
+
+    def test_filter_controls_include_kernel_and_rce(self, client):
+        html = client.get("/vulnerabilities").data.decode()
+        assert 'name="show_kernel"' in html and 'name="rce"' in html
 
     def test_filter_by_cve(self, client):
         self._seed_two()

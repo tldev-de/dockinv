@@ -14,7 +14,10 @@
     <tbody>
         {% for v in data %}
         <tr class="hover" data-href="/vulnerabilities/{{ v.id }}" tabindex="0" role="link">
-            <td>{{ v.id }}</td>
+            <td>
+                {{ v.id }}
+                {% if v.is_rce %}<span class="badge badge-error badge-sm ml-1" title="Remote code execution class">RCE</span>{% endif %}
+            </td>
             <td><span class="{{ sev(v.severity) }}">{{ v.severity }}</span></td>
             <td>{{ score(v.score) }}</td>
             <td>
