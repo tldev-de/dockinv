@@ -301,3 +301,36 @@ def test_scan_passes_timeout_kwarg(app, run_task, monkeypatch):
     monkeypatch.setattr(tasks.subprocess, "run", fake_run)
     run_task(tasks.trivy_background_task)
     assert seen["timeout"] == Config.TASK_SCAN_TIMEOUT
+
+
+# --- §5b on-demand single-image rescan -------------------------------------
+
+def test_rescan_image_forces_fresh_image(app, run_task, monkeypatch):
+    h = mk_host()
+    # already scanned & fresh -> the batch tasks would skip it; rescan must not.
+    image = Image(name="nginx", repo_digest="nginx@sha256:aaa",
+                  status_trivy={"old": True}, status_xeol={"old": True})
+    image.save()
+    mk_container(h, image)
+    _patch_subprocess(monkeypatch, stdout=json.dumps({"Results": []}))
+    run_task(tasks.rescan_image_task, image.id)
+    db.session.expire_all()   # task committed in its own context; drop stale identity-map copy
+    stored = Image.query.get(image.id)
+    assert stored.status_trivy == {"Results": []}   # overwritten despite being fresh
+    assert stored.status_xeol == {"Results": []}
+
+
+def test_rescan_unknown_image_no_crash(app, run_task, monkeypatch):
+    calls = _patch_subprocess(monkeypatch)
+    run_task(tasks.rescan_image_task, 9999)   # must not raise
+    assert calls == []
+
+
+def test_rescan_skips_image_without_digest(app, run_task, monkeypatch):
+    h = mk_host()
+    image = Image(name="local", repo_digest=None)
+    image.save()
+    mk_container(h, image)
+    calls = _patch_subprocess(monkeypatch)
+    run_task(tasks.rescan_image_task, image.id)
+    assert calls == []   # no scanner invoked without a repo digest

@@ -25,6 +25,14 @@
         <span class="font-bold">Last scanned : </span>
         {{ image_data.scanned }}
     </div>
+    <div class="mt-3">
+        <button class="btn btn-sm btn-secondary"
+                hx-post="/images/{{ image_data.id }}/scan" hx-swap="none"
+                hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}' hx-disabled-elt="this">
+            Rescan now
+            <span class="loading loading-spinner loading-xs htmx-indicator"></span>
+        </button>
+    </div>
 </div>
 <!-- container using image -->
 <span class="font-bold">

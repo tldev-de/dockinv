@@ -107,6 +107,28 @@ class TestScanTrigger:
         assert b'id="imagesTable"' in r.data
         assert b"Could not trigger scan" in r.data and b"alert-error" in r.data
 
+    def test_image_detail_has_rescan_button(self, client):
+        seed_host()
+        image_id = Image.query.first().id
+        html = client.get(f"/images/{image_id}").data
+        assert f'hx-post="/images/{image_id}/scan"'.encode() in html
+        assert b"Rescan now" in html
+
+    def test_rescan_single_image_enqueues_with_toast(self, client, monkeypatch):
+        seed_host()
+        image_id = Image.query.first().id
+        mock = MagicMock()
+        monkeypatch.setattr(tasks.rescan_image_task, "delay", mock)
+        r = client.post(f"/images/{image_id}/scan")
+        assert r.status_code == 200
+        mock.assert_called_once_with(image_id)
+        assert b'id="toast"' in r.data and b"Rescan queued" in r.data
+
+    def test_rescan_unknown_image_returns_error_toast(self, client):
+        r = client.post("/images/9999/scan")
+        assert r.status_code == 200
+        assert b"alert-error" in r.data
+
 
 class TestSecurityHeaders:
     def test_csp_and_nosniff_present(self, client):

@@ -73,7 +73,9 @@ def count_trivy_findings_image(image):
         return None
     trivy_findings = TrivyFindings(0, 0, 0, 0)
     status_trivy = image.status_trivy
-    results = status_trivy["Results"]
+    # Trivy omits "Results" entirely when it can't analyze an image (scan error,
+    # unsupported artifact); treat that as "no findings" instead of crashing.
+    results = status_trivy.get("Results") or []
     for result in results:
         if "Vulnerabilities" in result:
             for vulnerability in result["Vulnerabilities"]:
@@ -96,7 +98,7 @@ def transform_trivy_findings_for_display(image):
     all_findings = []
 
     status_trivy = image.status_trivy
-    results = status_trivy["Results"]
+    results = status_trivy.get("Results") or []
     for result in results:
         if "Vulnerabilities" in result:
             for vulnerability in result["Vulnerabilities"]:
@@ -409,6 +411,23 @@ def scan_images():
         toast = {'message': f'Could not trigger scan: {e}', 'category': 'error'}
     return (render_template('images/_images_table.html', data=_images_overview())
             + render_template('_toast.html', **toast))
+
+
+@frontend.route('/images/<int:image_id>/scan', methods=['POST'])
+def rescan_image(image_id):
+    """HTMX: force a Trivy + Xeol rescan of a single image (ignores the staleness window)."""
+    image = Image.query.get(image_id)
+    if not image:
+        return render_template('_toast.html', message=IMAGE_NOT_FOUND, category='error')
+    try:
+        from tasks import rescan_image_task
+        rescan_image_task.delay(image_id)
+        toast = {'message': f'Rescan queued for {image.name} — results appear once the scan '
+                            f'finishes (can take a few minutes); reload to see them.'}
+    except Exception as e:  # broker unreachable from the web process
+        toast = {'message': f'Could not trigger rescan: {e}', 'category': 'error'}
+    return render_template('_toast.html', **toast)
+
 
 @frontend.route('/images/<int:image_id>', methods=['GET'])
 def get_image_details(image_id):
