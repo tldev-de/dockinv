@@ -334,3 +334,46 @@ def test_rescan_skips_image_without_digest(app, run_task, monkeypatch):
     calls = _patch_subprocess(monkeypatch)
     run_task(tasks.rescan_image_task, image.id)
     assert calls == []   # no scanner invoked without a repo digest
+
+
+# --- §5c scan-error visibility ---------------------------------------------
+
+def test_xeol_failure_records_scan_error(app, run_task, monkeypatch):
+    h = mk_host()
+    image = Image(name="nginx", repo_digest="nginx@sha256:aaa")
+    image.save()
+    mk_container(h, image)
+    _patch_subprocess(monkeypatch, raise_called_process=True)   # stderr="boom", exit 1
+    run_task(tasks.xeol_background_task)
+    db.session.expire_all()
+    stored = Image.query.get(image.id)
+    assert stored.status_xeol is None          # nothing stored on failure
+    assert "exit 1" in stored.scan_error_xeol  # but the reason is recorded
+    assert "boom" in stored.scan_error_xeol
+
+
+def test_trivy_failure_records_scan_error(app, run_task, monkeypatch):
+    h = mk_host()
+    image = Image(name="nginx", repo_digest="nginx@sha256:aaa")
+    image.save()
+    mk_container(h, image)
+    _patch_subprocess(monkeypatch, raise_called_process=True)
+    run_task(tasks.trivy_background_task)
+    db.session.expire_all()
+    stored = Image.query.get(image.id)
+    assert stored.status_trivy is None
+    assert "exit 1" in stored.scan_error_trivy and "boom" in stored.scan_error_trivy
+
+
+def test_successful_scan_clears_previous_error(app, run_task, monkeypatch):
+    h = mk_host()
+    image = Image(name="nginx", repo_digest="nginx@sha256:aaa",
+                  scan_error_xeol="old failure")
+    image.save()
+    mk_container(h, image)
+    _patch_subprocess(monkeypatch, stdout=json.dumps({"matches": []}))
+    run_task(tasks.xeol_background_task)
+    db.session.expire_all()
+    stored = Image.query.get(image.id)
+    assert stored.status_xeol == {"matches": []}
+    assert stored.scan_error_xeol is None   # cleared on success

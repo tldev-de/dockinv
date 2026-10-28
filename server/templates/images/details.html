@@ -17,6 +17,8 @@
             <span class="text-error">Yes</span>
         {% elif image_data.is_eol == False %}
             No
+        {% elif image_data.xeol_error %}
+            <span class="text-warning">scan failed</span>
         {% else %}
             <span class="opacity-40">not scanned</span>
         {% endif %}
@@ -76,6 +78,14 @@
 <span class="font-bold">
     Trivy Findings
 </span>
+{% if image_data.trivy_error %}
+<div class="alert alert-warning my-2">
+    <div>
+        <div class="font-bold">Last Trivy scan failed</div>
+        <pre class="whitespace-pre-wrap break-all text-xs mt-1">{{ image_data.trivy_error }}</pre>
+    </div>
+</div>
+{% endif %}
 <div class="overflow-x-auto max-h-[32rem] mb-10">
     <table class="table table-zebra table-pin-rows table-pin-cols" id="trivyList">
     <thead>
@@ -90,7 +100,11 @@
     </thead>
     <tbody>
     {% if not image_data.trivy_scanned %}
+        {% if image_data.trivy_error %}
+        <tr><td colspan="6" class="text-warning py-4">Scan failed — see the message above.</td></tr>
+        {% else %}
         <tr><td colspan="6" class="opacity-60 py-4">Not scanned by Trivy yet.</td></tr>
+        {% endif %}
     {% elif not trivy_findings %}
         <tr><td colspan="6" class="text-success py-4">No vulnerabilities found.</td></tr>
     {% else %}
@@ -132,6 +146,14 @@
 <span class="font-bold">
     XEol Findings
 </span>
+{% if image_data.xeol_error %}
+<div class="alert alert-warning my-2">
+    <div>
+        <div class="font-bold">Last Xeol scan failed</div>
+        <pre class="whitespace-pre-wrap break-all text-xs mt-1">{{ image_data.xeol_error }}</pre>
+    </div>
+</div>
+{% endif %}
 <div class="overflow-x-auto max-h-[32rem]">
     <table class="table table-zebra table-pin-rows table-pin-cols" id="xeolList">
         <thead>
@@ -145,7 +167,11 @@
         </thead>
         <tbody>
         {% if not image_data.xeol_scanned %}
+            {% if image_data.xeol_error %}
+            <tr><td colspan="5" class="text-warning py-4">Scan failed — see the message above.</td></tr>
+            {% else %}
             <tr><td colspan="5" class="opacity-60 py-4">Not scanned by Xeol yet.</td></tr>
+            {% endif %}
         {% elif not xeol_findings %}
             <tr><td colspan="5" class="text-success py-4">No end-of-life components found.</td></tr>
         {% else %}

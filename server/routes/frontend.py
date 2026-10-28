@@ -444,6 +444,8 @@ def get_image_details(image_id):
         'scanned': humanize_age(image.updated_at),
         'trivy_scanned': image.status_trivy is not None,
         'xeol_scanned': image.status_xeol is not None,
+        'trivy_error': image.scan_error_trivy,
+        'xeol_error': image.scan_error_xeol,
     }
     trivy_findings = transform_trivy_findings_for_display(image)
     xeol_findings = transform_xeol_findings_for_display(image)

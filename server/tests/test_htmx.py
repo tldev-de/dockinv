@@ -130,6 +130,26 @@ class TestScanTrigger:
         assert b"alert-error" in r.data
 
 
+class TestScanErrorVisibility:
+    def test_detail_shows_xeol_scan_error(self, client):
+        seed_host()
+        image = Image.query.first()
+        image.scan_error_xeol = "exit 1: UNAUTHORIZED: authentication required"
+        image.save()
+        html = client.get(f"/images/{image.id}").data
+        assert b"Last Xeol scan failed" in html
+        assert b"UNAUTHORIZED: authentication required" in html
+        # EOL line reflects the failure instead of the ambiguous "not scanned"
+        assert b"scan failed" in html
+
+    def test_detail_plain_not_scanned_without_error(self, client):
+        seed_host()
+        image = Image.query.first()        # no scan_error set
+        html = client.get(f"/images/{image.id}").data
+        assert b"Not scanned by Xeol yet." in html
+        assert b"Last Xeol scan failed" not in html
+
+
 class TestSecurityHeaders:
     def test_csp_and_nosniff_present(self, client):
         r = client.get("/hosts")

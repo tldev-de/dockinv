@@ -55,8 +55,18 @@ def setup_periodic_tasks(**kwargs):
     )
 
 
+def _trim_error(msg):
+    """Keep stored scanner errors bounded (stderr can be verbose)."""
+    msg = ' '.join((msg or '').split())
+    return msg[:2000]
+
+
 def _run_trivy(image):
-    """Scan one image with Trivy and store the result (atomic writer). Logs on error."""
+    """Scan one image with Trivy and store the result (atomic writer).
+
+    On success clears ``scan_error_trivy``; on failure records the reason there so the UI
+    can distinguish a failed scan from "never scanned".
+    """
     if not image.repo_digest:
         logger.info(f'skip trivy for {image.name}: no repo digest')
         return
@@ -66,19 +76,29 @@ def _run_trivy(image):
             ['trivy', 'image', image.repo_digest, '--format', 'json'],
             check=True, capture_output=True, text=True, timeout=Config.TASK_SCAN_TIMEOUT)
         # Single, atomic writer: stores the JSON and rebuilds the normalized
-        # Vulnerability rows in one transaction so they never drift.
+        # Vulnerability rows in one transaction so they never drift. Clearing the error
+        # first means it is persisted in the same commit.
         from vulnerabilities import set_trivy_result
+        image.scan_error_trivy = None
         set_trivy_result(image, json.loads(result.stdout))
     except subprocess.TimeoutExpired:
-        logger.error(f"trivy timed out after {Config.TASK_SCAN_TIMEOUT}s for {image.repo_digest}")
+        msg = f"timed out after {Config.TASK_SCAN_TIMEOUT}s"
+        logger.error(f"trivy {msg} for {image.repo_digest}")
+        _record_scan_error(image, 'scan_error_trivy', msg)
     except subprocess.CalledProcessError as e:
         logger.error(f"Error running trivy: {e}: {e.stderr}")
+        _record_scan_error(image, 'scan_error_trivy', f"exit {e.returncode}: {e.stderr}")
     except json.JSONDecodeError as e:
         logger.error(f"trivy returned invalid JSON for {image.repo_digest}: {e}")
+        _record_scan_error(image, 'scan_error_trivy', f"invalid JSON output: {e}")
 
 
 def _run_xeol(image):
-    """Scan one image with Xeol and store the result. Logs on error."""
+    """Scan one image with Xeol and store the result.
+
+    On success clears ``scan_error_xeol``; on failure records the reason there so the UI
+    can distinguish a failed scan from "never scanned".
+    """
     if not image.repo_digest:
         logger.info(f'skip xeol for {image.name}: no repo digest')
         return
@@ -88,13 +108,24 @@ def _run_xeol(image):
             ['xeol', f'{image.repo_digest}', '--output', 'json'],
             check=True, capture_output=True, text=True, timeout=Config.TASK_SCAN_TIMEOUT)
         image.status_xeol = json.loads(result.stdout)
+        image.scan_error_xeol = None
         image.save()
     except subprocess.TimeoutExpired:
-        logger.error(f"xeol timed out after {Config.TASK_SCAN_TIMEOUT}s for {image.repo_digest}")
+        msg = f"timed out after {Config.TASK_SCAN_TIMEOUT}s"
+        logger.error(f"xeol {msg} for {image.repo_digest}")
+        _record_scan_error(image, 'scan_error_xeol', msg)
     except subprocess.CalledProcessError as e:
         logger.error(f"Error running xeol: {e}: {e.stderr}")
+        _record_scan_error(image, 'scan_error_xeol', f"exit {e.returncode}: {e.stderr}")
     except json.JSONDecodeError as e:
         logger.error(f"xeol returned invalid JSON for {image.repo_digest}: {e}")
+        _record_scan_error(image, 'scan_error_xeol', f"invalid JSON output: {e}")
+
+
+def _record_scan_error(image, field, message):
+    """Persist a scanner failure on the image without touching its stored result JSON."""
+    setattr(image, field, _trim_error(message))
+    image.save()
 
 
 @celery.task
