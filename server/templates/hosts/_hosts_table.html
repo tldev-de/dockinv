@@ -29,7 +29,7 @@
                     </svg>
                 {% endif %}
             </td>
-            <td>{{ entry.last_successful_call }}</td>
+            <td>{{ entry.last_successful_call or 'never' }}</td>
             <td>{{ entry.docker_containers }}</td>
             <td>{{ entry.docker_images }}</td>
             <td>{{ entry.eol_images }}</td>

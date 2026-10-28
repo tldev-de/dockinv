@@ -3,7 +3,7 @@
 {% block page %} {{ host.name }} {% endblock %}
 
 {% block body %}
-<form class="form-control max-w-96" method="post" action="/hosts/update/{{ host.id }}">
+<form id="editForm" class="form-control max-w-96" method="post" action="/hosts/update/{{ host.id }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
     <div class="mb-4">
         <label for="name" class="label">
@@ -29,15 +29,18 @@
         </label>
         <input type="checkbox" class="checkbox ml-auto mr-4" value="1" name="enabled" id="enabled" {% if host.enabled %} checked="checked" {% endif %}/>
     </div>
-    <div class="mb-4 flex">
-        <div>
-            <button type="submit" class="btn btn-sm btn-primary max-w-md mx-auto my-4">save</button>
-            <form method="post" action="/hosts/delete/{{ host.id }}" style="display:inline">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <button type="submit" class="btn btn-sm btn-error max-w-md mx-auto my-4">delete</button>
-            </form>
-        </div>
-        <a href="/hosts" class="btn btn-sm btn-neutral max-w-md my-4 ml-auto">back</a>
-    </div>
 </form>
+
+<!-- Separate (non-nested) form for the delete action -->
+<form id="deleteForm" method="post" action="/hosts/delete/{{ host.id }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+</form>
+
+<div class="max-w-96 mb-4 flex">
+    <div>
+        <button type="submit" form="editForm" class="btn btn-sm btn-primary max-w-md mx-auto my-4">save</button>
+        <button type="submit" form="deleteForm" class="btn btn-sm btn-error max-w-md mx-auto my-4">delete</button>
+    </div>
+    <a href="/hosts" class="btn btn-sm btn-neutral max-w-md my-4 ml-auto">back</a>
+</div>
 {% endblock %}

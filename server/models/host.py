@@ -15,3 +15,5 @@ class Host(db.Model, BaseModel):
     token: str = db.Column(db.String(254), nullable=False)
     created_at: datetime = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at: datetime = db.Column(db.DateTime, nullable=True, onupdate=lambda: datetime.now(timezone.utc))
+    # Set by the collector on every successful poll ("Last Successful Agent Call").
+    last_seen: datetime = db.Column(db.DateTime, nullable=True)

@@ -148,6 +148,29 @@ class TestHealth:
         assert res.get_json()["status"] == "error"
 
 
+def test_edit_page_forms_not_nested(client):
+    # #1: delete form must be a separate (non-nested) form, wired via form= attribute
+    host, _ = seed()
+    html = client.get(f"/hosts/edit/{host.id}").data.decode()
+    assert 'id="editForm"' in html and 'id="deleteForm"' in html
+    assert 'form="editForm"' in html and 'form="deleteForm"' in html
+    # the delete <form> opens after the edit <form> has closed (not inside it)
+    assert html.index('id="deleteForm"') > html.index('</form>')
+
+
+def test_image_detail_has_no_stack_column(client):
+    # #4: the dead "Stack" column is gone
+    seed()
+    image_id = Image.query.first().id
+    assert b"Stack" not in client.get(f"/images/{image_id}").data
+
+
+def test_hosts_last_seen_shows_never_before_first_poll(client):
+    # #2: a never-polled host shows "never", not its create/update time
+    seed()
+    assert b"never" in client.get("/hosts").data
+
+
 def test_logout_clears_session(client):
     with client.session_transaction() as sess:
         sess["user"] = {"email": "user@example.com"}

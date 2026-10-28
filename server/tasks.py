@@ -174,6 +174,8 @@ def data_collector_background_task():
                     logger.info(f'Removing stale container {stale.name} from host {host.name}')
                     stale.delete()
 
+            host.last_seen = datetime.now(timezone.utc)
+            host.save()
         except Exception as e:
             logger.error(f'Error processing host {host.name}: {e}')
             continue

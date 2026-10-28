@@ -44,6 +44,25 @@ def test_creates_rows(app, run_task):
     assert c.image_string == "nginx:1.0" and c.status == "running"
 
 
+def test_collector_sets_last_seen(app, run_task):
+    host = mk_host()
+    assert host.last_seen is None
+    with requests_mock.Mocker() as m:
+        m.get(AGENT + "containers", json=[payload()])
+        run_task(tasks.data_collector_background_task)
+    db.session.expire_all()  # task committed in its own session; drop stale cache
+    assert Host.query.get(host.id).last_seen is not None
+
+
+def test_collector_leaves_last_seen_on_failure(app, run_task):
+    host = mk_host()
+    with requests_mock.Mocker() as m:
+        m.get(AGENT + "containers", status_code=500)
+        run_task(tasks.data_collector_background_task)
+    db.session.expire_all()
+    assert Host.query.get(host.id).last_seen is None  # unreachable agent -> not updated
+
+
 def test_bug1_image_change_updates_image_id(app, run_task):
     mk_host()
     with requests_mock.Mocker() as m:
