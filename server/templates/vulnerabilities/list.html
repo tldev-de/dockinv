@@ -41,6 +41,13 @@
         </label>
     </div>
     <div>
+        <label class="label cursor-pointer gap-2" for="exposed">
+            <span class="text-warning font-medium">Exposed only</span>
+            <input id="exposed" name="exposed" type="checkbox" value="1" {% if exposed %}checked{% endif %}
+                   class="checkbox checkbox-sm">
+        </label>
+    </div>
+    <div>
         <label class="label cursor-pointer gap-2" for="show_kernel">
             <span>Show kernel noise</span>
             <input id="show_kernel" name="show_kernel" type="checkbox" value="1" {% if show_kernel %}checked{% endif %}

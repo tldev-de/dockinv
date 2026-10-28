@@ -137,12 +137,20 @@ def _dashboard_overview():
     images = (Image.query.filter(Image.id.in_(in_use_image_ids)).all()
               if in_use_image_ids else [])
 
-    # distinct CVEs per severity across in-use images (matches /vulnerabilities semantics)
+    # distinct CVEs per severity across in-use images (matches /vulnerabilities semantics),
+    # plus the subset on Traefik-reachable ("exposed") images — the attackable surface.
     sev_sets = {"CRITICAL": set(), "HIGH": set(), "MEDIUM": set(), "LOW": set()}
+    exposed_ids = set(_image_hostnames())
+    exposed_critical, exposed_rce = set(), set()
     if in_use_image_ids:
         for v in Vulnerability.query.filter(Vulnerability.image_id.in_(in_use_image_ids)).all():
             if v.severity in sev_sets:
                 sev_sets[v.severity].add(v.cve_id)
+            if v.image_id in exposed_ids:
+                if v.severity == "CRITICAL":
+                    exposed_critical.add(v.cve_id)
+                if v.is_rce:
+                    exposed_rce.add(v.cve_id)
 
     worst = []
     for img in images:
@@ -166,6 +174,8 @@ def _dashboard_overview():
         'image_total': len(images),
         'eol_total': sum(1 for img in images if is_image_eol(img)),
         'severities': {k.lower(): len(s) for k, s in sev_sets.items()},
+        'exposed_critical': len(exposed_critical),
+        'exposed_rce': len(exposed_rce),
         'last_collection': humanize_age(max(last_calls)) if last_calls else None,
         'worst_images': worst[:5],
     }
@@ -489,20 +499,33 @@ def _parse_vuln_filters(args):
         min_cvss = None
     only_fixable = _truthy(args.get('fixable'))
     rce_only = _truthy(args.get('rce'))
+    exposed_only = _truthy(args.get('exposed'))
     # Kernel noise is hidden unless explicitly shown, so a bare page load (no params)
     # already yields a de-noised list; `show_kernel` is a normal default-off checkbox.
     hide_kernel = not _truthy(args.get('show_kernel'))
-    return cve, severity, min_cvss, only_fixable, hide_kernel, rce_only
+    return cve, severity, min_cvss, only_fixable, hide_kernel, rce_only, exposed_only
+
+
+def _image_hostnames():
+    """image_id -> set of Traefik hostnames. An image is 'exposed' if any of its
+    containers advertises a Host() rule, i.e. it is reachable via Traefik."""
+    mapping = {}
+    for image_id, hn in (db.session.query(Container.image_id, Container.hostnames)
+                         .filter(Container.hostnames.isnot(None), Container.hostnames != '')):
+        mapping.setdefault(image_id, set()).update(
+            h.strip() for h in hn.split(',') if h.strip())
+    return mapping
 
 
 def _vulnerabilities_overview(cve='', severity='', min_cvss=None, only_fixable=False,
-                              hide_kernel=True, rce_only=False):
+                              hide_kernel=True, rce_only=False, exposed_only=False):
     # Only images that actually run somewhere count as "vulnerable containers".
     container_counts = dict(
         db.session.query(Container.image_id, func.count(Container.id))
         .group_by(Container.image_id).all()
     )
     image_names = dict(db.session.query(Image.id, Image.name).all())
+    image_hostnames = _image_hostnames()
 
     query = Vulnerability.query
     if cve:
@@ -517,9 +540,10 @@ def _vulnerabilities_overview(cve='', severity='', min_cvss=None, only_fixable=F
         entry = agg.get(v.cve_id)
         if entry is None:
             entry = agg[v.cve_id] = {'id': v.cve_id, 'severity': v.severity, 'score': v.score,
-                                     'images': set(), 'packages': set(),
+                                     'images': set(), 'packages': set(), 'hostnames': set(),
                                      'fixable': False, 'is_rce': False}
         entry['images'].add(v.image_id)
+        entry['hostnames'].update(image_hostnames.get(v.image_id, ()))
         if v.pkg_name:
             entry['packages'].add(v.pkg_name)
         entry['fixable'] = entry['fixable'] or bool(v.fixed_version)
@@ -531,6 +555,7 @@ def _vulnerabilities_overview(cve='', severity='', min_cvss=None, only_fixable=F
 
     data = []
     for e in agg.values():
+        exposed = bool(e['hostnames'])
         if severity and _rank(e['severity']) > _rank(severity):
             continue  # keep only CVEs at or above the selected minimum severity
         if min_cvss is not None and (e['score'] is None or e['score'] < min_cvss):
@@ -539,36 +564,41 @@ def _vulnerabilities_overview(cve='', severity='', min_cvss=None, only_fixable=F
             continue  # keep only CVEs with a fixed version available somewhere
         if rce_only and not e['is_rce']:
             continue  # keep only remote-code-execution class CVEs
+        if exposed_only and not exposed:
+            continue  # keep only CVEs on Traefik-reachable containers
         data.append({
             'id': e['id'], 'severity': e['severity'], 'score': e['score'],
             'fixable': e['fixable'], 'is_rce': e['is_rce'],
+            'exposed': exposed, 'hostnames': ', '.join(sorted(e['hostnames'])),
             'packages': ', '.join(sorted(e['packages'])),
             'images': ', '.join(sorted({image_names.get(i, '?') for i in e['images']})),
             'image_count': len(e['images']),
             'container_count': sum(container_counts[i] for i in e['images']),
         })
-    # RCE first, then by score/severity — so the dangerous ones surface at the top.
+    # RCE first, then by score/severity; exposure breaks ties so reachable CVEs win.
     data.sort(key=lambda d: (not d['is_rce'], d['score'] is None, -(d['score'] or 0),
-                             _rank(d['severity']), d['id']))
+                             _rank(d['severity']), not d['exposed'], d['id']))
     return data
 
 
 @frontend.route('/vulnerabilities', methods=['GET'])
 def get_vulnerabilities():
-    cve, severity, min_cvss, only_fixable, hide_kernel, rce_only = _parse_vuln_filters(request.args)
-    data = _vulnerabilities_overview(cve, severity, min_cvss, only_fixable, hide_kernel, rce_only)
+    cve, severity, min_cvss, only_fixable, hide_kernel, rce_only, exposed_only = _parse_vuln_filters(request.args)
+    data = _vulnerabilities_overview(cve, severity, min_cvss, only_fixable, hide_kernel,
+                                     rce_only, exposed_only)
     return render_template('vulnerabilities/list.html', data=data,
                            cve=cve, severity=severity, min_cvss=request.args.get('min_cvss', ''),
-                           fixable=only_fixable, show_kernel=not hide_kernel, rce=rce_only)
+                           fixable=only_fixable, show_kernel=not hide_kernel, rce=rce_only,
+                           exposed=exposed_only)
 
 
 @frontend.route('/vulnerabilities/table', methods=['GET'])
 def get_vulnerabilities_table():
     """HTMX partial: the filtered vulnerability table."""
-    cve, severity, min_cvss, only_fixable, hide_kernel, rce_only = _parse_vuln_filters(request.args)
+    cve, severity, min_cvss, only_fixable, hide_kernel, rce_only, exposed_only = _parse_vuln_filters(request.args)
     return render_template('vulnerabilities/_table.html',
                            data=_vulnerabilities_overview(cve, severity, min_cvss, only_fixable,
-                                                          hide_kernel, rce_only))
+                                                          hide_kernel, rce_only, exposed_only))
 
 
 @frontend.route('/vulnerabilities/<cve_id>', methods=['GET'])
@@ -600,6 +630,7 @@ def get_vulnerability_detail(cve_id):
                 'fixed': v.fixed_version,
                 'severity': v.severity,
                 'score': v.score,
+                'hostnames': container.hostnames.split(', ') if container.hostnames else [],
             })
 
     if not rows:

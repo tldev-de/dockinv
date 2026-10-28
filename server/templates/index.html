@@ -34,6 +34,13 @@
 
 <!-- Open vulnerabilities by severity -->
 <div class="font-bold mb-2">Open vulnerabilities</div>
+{% if data.exposed_critical or data.exposed_rce %}
+<a href="/vulnerabilities?exposed=1" class="alert alert-warning mb-4 block hover:opacity-90" role="alert">
+    <span>⚠ <span class="font-bold">Exposed attack surface</span> (reachable via Traefik):
+        <span class="font-bold">{{ data.exposed_critical }}</span> Critical ·
+        <span class="font-bold">{{ data.exposed_rce }}</span> RCE — prioritise these.</span>
+</a>
+{% endif %}
 <div class="flex flex-wrap gap-3 mb-8">
     <a href="/vulnerabilities?severity=CRITICAL" class="card bg-base-200 hover:bg-base-300 px-5 py-3">
         <div class="text-2xl font-bold" style="color: #b71c1c">{{ data.severities.critical }}</div>

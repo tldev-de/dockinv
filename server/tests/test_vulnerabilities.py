@@ -14,11 +14,12 @@ def make_host(name="h1"):
     return h
 
 
-def make_image_with_container(host, name="nginx", digest=None, cname=None):
+def make_image_with_container(host, name="nginx", digest=None, cname=None, hostnames=None):
     img = Image(name=name, repo_digest=digest or f"{name}@sha256:{host.id}")
     img.save()
     Container(host_id=host.id, name=cname or f"c-{name}", image_string=f"{name}:1",
-              image_id=img.id, status="running", started_at=datetime.now(timezone.utc)).save()
+              image_id=img.id, status="running", started_at=datetime.now(timezone.utc),
+              hostnames=hostnames).save()
     return img
 
 
@@ -260,6 +261,40 @@ class TestRoutes:
     def test_filter_controls_include_kernel_and_rce(self, client):
         html = client.get("/vulnerabilities").data.decode()
         assert 'name="show_kernel"' in html and 'name="rce"' in html
+
+    def _seed_exposed_and_internal(self):
+        host = make_host("hx")
+        exposed = make_image_with_container(host, "expo", "expo@sha256:1", "c-expo",
+                                            hostnames="app.example")
+        internal = make_image_with_container(host, "intr", "intr@sha256:2", "c-intr")
+        vuln_service.set_trivy_result(exposed, trivy_blob(vuln("CVE-EXPOSED", severity="CRITICAL")))
+        vuln_service.set_trivy_result(internal, trivy_blob(vuln("CVE-INTERNAL", severity="CRITICAL")))
+        return exposed, internal
+
+    def test_exposed_badge_and_filter(self, client):
+        self._seed_exposed_and_internal()
+        html = client.get("/vulnerabilities").data.decode()
+        assert "CVE-EXPOSED" in html and "CVE-INTERNAL" in html
+        assert 'title="Reachable via Traefik: app.example">exposed' in html
+        only = client.get("/vulnerabilities?exposed=1").data.decode()
+        assert "CVE-EXPOSED" in only
+        assert "CVE-INTERNAL" not in only   # internal image filtered out
+
+    def test_filter_controls_include_exposed(self, client):
+        assert 'name="exposed"' in client.get("/vulnerabilities").data.decode()
+
+    def test_detail_shows_exposed_hostnames(self, client):
+        self._seed_exposed_and_internal()
+        html = client.get("/vulnerabilities/CVE-EXPOSED").data.decode()
+        assert 'href="https://app.example"' in html
+
+    def test_dashboard_counts_exposed(self, client):
+        self._seed_exposed_and_internal()
+        from routes.frontend import _dashboard_overview
+        d = _dashboard_overview()
+        assert d['exposed_critical'] == 1   # only the Traefik-reachable image counts
+        html = client.get("/").data.decode()
+        assert "Exposed attack surface" in html and "/vulnerabilities?exposed=1" in html
 
     def test_filter_by_cve(self, client):
         self._seed_two()

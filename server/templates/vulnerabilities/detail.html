@@ -35,7 +35,12 @@
         {% for r in rows %}
         <tr class="hover" data-href="/container/{{ r.container_id }}" tabindex="0" role="link">
             <td>{{ r.host }}</td>
-            <td>{{ r.container }}</td>
+            <td>
+                {{ r.container }}
+                {% for h in r.hostnames %}
+                    <br/><a class="text-warning text-xs underline" href="https://{{ h }}" target="_blank" rel="noopener">↗ {{ h }}</a>
+                {% endfor %}
+            </td>
             <td><a href="/images/{{ r.image_id }}" class="underline">{{ r.image }}</a></td>
             <td>{{ r.pkg }}</td>
             <td>{{ r.installed }}</td>
