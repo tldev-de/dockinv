@@ -1,12 +1,13 @@
 """§2 – Unit tests for the Trivy/Xeol JSON parsing helpers (no DB required)."""
 import json
 import os
+from datetime import date
 from types import SimpleNamespace
 
 import pytest
 
 from routes import frontend
-from util import parse_trivy_to_str, parse_xeol_to_str, generate_random_string
+from util import parse_trivy_to_str, parse_xeol_to_str, generate_random_string, cycle_is_eol
 
 FIX = os.path.join(os.path.dirname(__file__), "fixtures")
 
@@ -28,6 +29,13 @@ def host_with(*images):
     return SimpleNamespace(containers=[SimpleNamespace(image=i) for i in images])
 
 
+def xeol_with(eol, product="Redis", cycle="7.4", version="7.4.12"):
+    """A single-match xeol result whose cycle carries the given ``Eol`` value."""
+    return {"matches": [{"Cycle": {"ProductName": product, "ReleaseCycle": cycle,
+                                   "ReleaseDate": "2024-07-01", "Eol": eol},
+                         "artifact": {"name": product.lower(), "version": version}}]}
+
+
 class TestCountTrivyFindingsImage:
     def test_counts_crit_high_medium_low(self):
         f = frontend.count_trivy_findings_image(img(trivy=TRIVY))
@@ -46,9 +54,37 @@ class TestCountTrivyFindingsImage:
         assert (f.high, f.medium, f.low) == (0, 0, 0)
 
 
+class TestCycleIsEol:
+    def test_past_date_is_eol(self):
+        assert cycle_is_eol({"Eol": "2000-01-01"}) is True
+
+    def test_future_date_not_eol(self):
+        # a known EOL date still in the future is NOT end-of-life yet
+        assert cycle_is_eol({"Eol": "2999-12-31"}) is False
+
+    def test_boundary_today_is_eol(self):
+        assert cycle_is_eol({"Eol": "2026-06-15"}, today=date(2026, 6, 15)) is True
+
+    def test_boolean_true_and_false(self):
+        assert cycle_is_eol({"Eol": True}) is True
+        assert cycle_is_eol({"Eol": False}) is False
+
+    def test_missing_key_or_malformed_or_none(self):
+        assert cycle_is_eol({"ProductName": "x"}) is False
+        assert cycle_is_eol({"Eol": "not-a-date"}) is False
+        assert cycle_is_eol(None) is False
+
+
 class TestIsImageEol:
     def test_true_when_eol_present(self):
-        assert frontend.is_image_eol(img(xeol=XEOL)) is True
+        assert frontend.is_image_eol(img(xeol=XEOL)) is True  # fixture EOL 2022-09-10 (past)
+
+    def test_false_when_eol_date_in_future(self):
+        # regression: Redis 7.4 (EOL 2026-11-30) must not be flagged before the date
+        assert frontend.is_image_eol(img(xeol=xeol_with("2999-12-31"))) is False
+
+    def test_true_when_eol_date_in_past(self):
+        assert frontend.is_image_eol(img(xeol=xeol_with("2000-01-01"))) is True
 
     def test_false_when_no_eol_key(self):
         xeol = {"matches": [{"Cycle": {"ProductName": "Debian", "ReleaseCycle": "12"}}]}
@@ -102,7 +138,14 @@ class TestTransformForDisplay:
             "Version": "10",
             "ReleaseDate": "2019-07-06",
             "EolDate": "2022-09-10",
+            "IsEol": True,  # past EOL date
         }
+
+    def test_xeol_iseol_flag_reflects_date(self):
+        future = frontend.transform_xeol_findings_for_display(img(xeol=xeol_with("2999-12-31")))
+        assert future[0]["IsEol"] is False
+        past = frontend.transform_xeol_findings_for_display(img(xeol=xeol_with("2000-01-01")))
+        assert past[0]["IsEol"] is True
 
     def test_xeol_none_when_no_status(self):
         assert frontend.transform_xeol_findings_for_display(img(xeol=None)) is None
@@ -131,6 +174,10 @@ class TestUtilStringHelpers:
 
     def test_parse_xeol_to_str_ok(self):
         assert parse_xeol_to_str({"matches": []}) == "OK"
+
+    def test_parse_xeol_to_str_ok_when_only_future_eol(self):
+        # a cycle with a future EOL date is reported as OK, not EOL
+        assert parse_xeol_to_str(xeol_with("2999-12-31")) == "OK"
 
     def test_generate_random_string(self):
         s = generate_random_string(32)

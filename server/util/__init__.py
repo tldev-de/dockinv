@@ -1,8 +1,28 @@
 import secrets
 import string
+from datetime import date, datetime
 
 from tabulate import tabulate
 from extensions import db
+
+
+def cycle_is_eol(cycle, today=None) -> bool:
+    """Whether an xeol release cycle has actually reached end-of-life.
+
+    Xeol lists a cycle whenever it has a *known* EOL date, even when that date
+    is still in the future. endoflife.date (xeol's source) encodes ``Eol`` as a
+    boolean (already/never EOL) or an ``YYYY-MM-DD`` date. A cycle counts as EOL
+    only if the boolean is true or the date is today or in the past.
+    """
+    eol = (cycle or {}).get("Eol")
+    if isinstance(eol, bool):
+        return eol
+    if isinstance(eol, str):
+        try:
+            return datetime.strptime(eol, "%Y-%m-%d").date() <= (today or date.today())
+        except ValueError:
+            return False
+    return False
 
 
 def render_table(model: db.Model, obj: list) -> str:
@@ -22,7 +42,7 @@ def parse_xeol_to_str(status_xeol) -> str:
     results = []
     matches = status_xeol.get("matches", [])
     for match in matches:
-        if "Eol" in match["Cycle"]:
+        if cycle_is_eol(match["Cycle"]):
             product_name = match["Cycle"]["ProductName"]
             release_cycle = match["Cycle"]["ReleaseCycle"]
             eol_date = match["Cycle"]["Eol"]

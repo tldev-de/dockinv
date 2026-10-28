@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from flask import render_template, Blueprint, request, flash, redirect, url_for
-from util import generate_random_string
+from util import generate_random_string, cycle_is_eol
 from sqlalchemy import or_, func
 from sqlalchemy.orm import selectinload
 
@@ -38,7 +38,7 @@ def is_image_eol(image):
     if not image or not image.status_xeol:
         return None
     matches = image.status_xeol.get("matches", [])
-    return any("Eol" in match.get("Cycle", {}) for match in matches)
+    return any(cycle_is_eol(match.get("Cycle", {})) for match in matches)
 
 
 
@@ -106,6 +106,7 @@ def transform_xeol_findings_for_display(image):
                 'Version': match['artifact']['version'],
                 'ReleaseDate': match['Cycle']['ReleaseDate'],
                 'EolDate': match['Cycle']['Eol'],
+                'IsEol': cycle_is_eol(match['Cycle']),  # past-EOL vs. still-supported
             })
 
     all_findings.sort(key=lambda x: x['EolDate'])

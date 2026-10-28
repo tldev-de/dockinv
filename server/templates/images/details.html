@@ -122,6 +122,7 @@
                 <th>Version</th>
                 <th>Release date</th>
                 <th>EOL date</th>
+                <th>Status</th>
             </tr>
         </thead>
         <tbody>
@@ -132,6 +133,10 @@
                     <td> {{ finding.Version }} </td>
                     <td> {{ finding.ReleaseDate }} </td>
                     <td> {{ finding.EolDate }} </td>
+                    <td>
+                        {% if finding.IsEol %}<span class="text-error">EOL</span>
+                        {% else %}<span class="text-success">supported</span>{% endif %}
+                    </td>
                 </tr>
              {% endfor %}
         {% endif %}
