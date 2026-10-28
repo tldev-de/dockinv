@@ -1,39 +1,32 @@
 {% extends 'base.html.j2' %}
-{% from 'vulnerabilities/_macros.html' import sev, score %}
 
 {% block page %}Vulnerabilities{% endblock %}
 
-{% block filter_table %}vulnTable{% endblock %}
-{% block filter_cols %}0{% endblock %}
-
 {% block body %}
-<table class="table table-zebra" id="vulnTable">
-    <thead>
-        <tr>
-            <th>CVE</th>
-            <th>Severity</th>
-            <th>CVSS</th>
-            <th>Affected Images</th>
-            <th>Affected Containers</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for v in data %}
-        <tr class="hover" data-href="/vulnerabilities/{{ v.id }}" tabindex="0" role="link">
-            <td>{{ v.id }}</td>
-            <td><span class="{{ sev(v.severity) }}">{{ v.severity }}</span></td>
-            <td>{{ score(v.score) }}</td>
-            <td>{{ v.image_count }}</td>
-            <td>{{ v.container_count }}</td>
-        </tr>
-        {% endfor %}
-        {% if not data %}
-        <tr>
-            <td colspan="5" class="text-center opacity-60 py-6">
-                No vulnerabilities found on running containers yet (images need a Trivy scan first).
-            </td>
-        </tr>
-        {% endif %}
-    </tbody>
-</table>
+<form class="flex flex-wrap gap-3 mb-4 items-end"
+      hx-get="/vulnerabilities/table" hx-target="#vulnTable" hx-swap="outerHTML"
+      hx-trigger="change, keyup changed delay:400ms">
+    <div>
+        <label class="label" for="cve">CVE</label>
+        <input id="cve" name="cve" value="{{ cve }}" placeholder="CVE-…"
+               class="input input-bordered input-sm">
+    </div>
+    <div>
+        <label class="label" for="severity">Min. Severity</label>
+        <select id="severity" name="severity" class="select select-bordered select-sm">
+            <option value="">All</option>
+            <option value="CRITICAL" {% if severity == 'CRITICAL' %}selected{% endif %}>Critical</option>
+            <option value="HIGH" {% if severity == 'HIGH' %}selected{% endif %}>High</option>
+            <option value="MEDIUM" {% if severity == 'MEDIUM' %}selected{% endif %}>Medium</option>
+            <option value="LOW" {% if severity == 'LOW' %}selected{% endif %}>Low</option>
+        </select>
+    </div>
+    <div>
+        <label class="label" for="min_cvss">Min. CVSS</label>
+        <input id="min_cvss" name="min_cvss" value="{{ min_cvss }}" type="number" step="0.1" min="0" max="10"
+               class="input input-bordered input-sm w-24">
+    </div>
+</form>
+
+{% include 'vulnerabilities/_table.html' %}
 {% endblock %}

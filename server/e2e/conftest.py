@@ -31,14 +31,29 @@ def live_server(tmp_path_factory):
 
     os.environ.setdefault("SECRET_KEY", "e2e-secret")
 
+    from datetime import datetime, timezone
+
     from app import create_app
     from extensions import db
-    from models import Host
+    from models import Host, Image, Container
+    import vulnerabilities as vuln_service
 
     app = create_app(_Cfg)
     with app.app_context():
         db.create_all()
-        Host(name="smoke-host", address="http://a/", enabled=True, token="t").save()
+        host = Host(name="smoke-host", address="http://a/", enabled=True, token="t")
+        host.save()
+        # Seed an image + container + two CVEs so the Vulnerabilities page has data to filter.
+        image = Image(name="nginx", repo_digest="nginx@sha256:a")
+        image.save()
+        Container(host_id=host.id, name="web", image_string="nginx:1", image_id=image.id,
+                  status="running", started_at=datetime.now(timezone.utc)).save()
+        vuln_service.set_trivy_result(image, {"Results": [{"Vulnerabilities": [
+            {"VulnerabilityID": "CVE-2026-111111", "Severity": "CRITICAL", "PkgName": "libssl",
+             "CVSS": {"nvd": {"V3Score": 9.8}}},
+            {"VulnerabilityID": "CVE-2026-222222", "Severity": "LOW", "PkgName": "zlib",
+             "CVSS": {"nvd": {"V3Score": 3.1}}},
+        ]}]})
 
     server = make_server(HOST, PORT, app, threaded=True)
     thread = threading.Thread(target=server.serve_forever, daemon=True)

@@ -1,0 +1,30 @@
+{% from 'vulnerabilities/_macros.html' import sev, score %}
+<table class="table table-zebra" id="vulnTable">
+    <thead>
+        <tr>
+            <th>CVE</th>
+            <th>Severity</th>
+            <th>CVSS</th>
+            <th>Packages</th>
+            <th>Affected Images</th>
+            <th>Containers</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for v in data %}
+        <tr class="hover" data-href="/vulnerabilities/{{ v.id }}" tabindex="0" role="link">
+            <td>{{ v.id }}</td>
+            <td><span class="{{ sev(v.severity) }}">{{ v.severity }}</span></td>
+            <td>{{ score(v.score) }}</td>
+            <td class="text-sm">{{ v.packages }}</td>
+            <td class="text-sm">{{ v.images }}</td>
+            <td>{{ v.container_count }}</td>
+        </tr>
+        {% endfor %}
+        {% if not data %}
+        <tr>
+            <td colspan="6" class="text-center opacity-60 py-6">No vulnerabilities match the current filters.</td>
+        </tr>
+        {% endif %}
+    </tbody>
+</table>

@@ -377,33 +377,76 @@ def _rank(severity):
     return _SEVERITY_RANK.get(severity, 4)
 
 
-@frontend.route('/vulnerabilities', methods=['GET'])
-def get_vulnerabilities():
+def _parse_vuln_filters(args):
+    cve = (args.get('cve') or '').strip()
+    severity = (args.get('severity') or '').strip().upper()
+    raw_cvss = (args.get('min_cvss') or '').strip()
+    try:
+        min_cvss = float(raw_cvss) if raw_cvss else None
+    except ValueError:
+        min_cvss = None
+    return cve, severity, min_cvss
+
+
+def _vulnerabilities_overview(cve='', severity='', min_cvss=None):
     # Only images that actually run somewhere count as "vulnerable containers".
     container_counts = dict(
         db.session.query(Container.image_id, func.count(Container.id))
         .group_by(Container.image_id).all()
     )
+    image_names = dict(db.session.query(Image.id, Image.name).all())
+
+    query = Vulnerability.query
+    if cve:
+        query = query.filter(Vulnerability.cve_id.ilike(f'%{cve}%'))
+
     agg = {}
-    for v in Vulnerability.query.all():
+    for v in query.all():
         if container_counts.get(v.image_id, 0) == 0:
             continue
         entry = agg.get(v.cve_id)
         if entry is None:
-            entry = agg[v.cve_id] = {'id': v.cve_id, 'severity': v.severity, 'score': v.score, 'images': set()}
+            entry = agg[v.cve_id] = {'id': v.cve_id, 'severity': v.severity, 'score': v.score,
+                                     'images': set(), 'packages': set()}
         entry['images'].add(v.image_id)
+        if v.pkg_name:
+            entry['packages'].add(v.pkg_name)
         if _rank(v.severity) < _rank(entry['severity']):
             entry['severity'] = v.severity
         if v.score is not None and (entry['score'] is None or v.score > entry['score']):
             entry['score'] = v.score
 
-    data = [{
-        'id': e['id'], 'severity': e['severity'], 'score': e['score'],
-        'image_count': len(e['images']),
-        'container_count': sum(container_counts[i] for i in e['images']),
-    } for e in agg.values()]
+    data = []
+    for e in agg.values():
+        if severity and _rank(e['severity']) > _rank(severity):
+            continue  # keep only CVEs at or above the selected minimum severity
+        if min_cvss is not None and (e['score'] is None or e['score'] < min_cvss):
+            continue
+        data.append({
+            'id': e['id'], 'severity': e['severity'], 'score': e['score'],
+            'packages': ', '.join(sorted(e['packages'])),
+            'images': ', '.join(sorted({image_names.get(i, '?') for i in e['images']})),
+            'image_count': len(e['images']),
+            'container_count': sum(container_counts[i] for i in e['images']),
+        })
     data.sort(key=lambda d: (d['score'] is None, -(d['score'] or 0), _rank(d['severity']), d['id']))
-    return render_template('vulnerabilities/list.html', data=data)
+    return data
+
+
+@frontend.route('/vulnerabilities', methods=['GET'])
+def get_vulnerabilities():
+    cve, severity, min_cvss = _parse_vuln_filters(request.args)
+    data = _vulnerabilities_overview(cve, severity, min_cvss)
+    return render_template('vulnerabilities/list.html', data=data,
+                           cve=cve, severity=severity, min_cvss=request.args.get('min_cvss', ''))
+
+
+@frontend.route('/vulnerabilities/table', methods=['GET'])
+def get_vulnerabilities_table():
+    """HTMX partial: the filtered vulnerability table."""
+    cve, severity, min_cvss = _parse_vuln_filters(request.args)
+    return render_template('vulnerabilities/_table.html',
+                           data=_vulnerabilities_overview(cve, severity, min_cvss))
 
 
 @frontend.route('/vulnerabilities/<cve_id>', methods=['GET'])

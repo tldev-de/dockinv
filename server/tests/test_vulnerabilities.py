@@ -144,7 +144,47 @@ class TestRoutes:
         assert "CVE-2026-109618" in html and "CVE-2026-109619" in html
 
     def test_list_empty_state(self, client):
-        assert b"No vulnerabilities found" in client.get("/vulnerabilities").data
+        assert b"No vulnerabilities match" in client.get("/vulnerabilities").data
+
+    def test_list_shows_packages(self, client):
+        self._seed_two()
+        html = client.get("/vulnerabilities").data.decode()
+        assert "libfoo" in html and "bar" in html   # package names listed inline
+
+    def test_filter_controls_present(self, client):
+        html = client.get("/vulnerabilities").data.decode()
+        assert 'name="cve"' in html and 'name="severity"' in html and 'name="min_cvss"' in html
+        assert 'hx-get="/vulnerabilities/table"' in html
+
+    def test_filter_by_cve(self, client):
+        self._seed_two()
+        html = client.get("/vulnerabilities?cve=109619").data.decode()
+        assert "CVE-2026-109619" in html
+        assert "CVE-2026-109618" not in html
+
+    def test_filter_by_min_severity(self, client):
+        self._seed_two()
+        html = client.get("/vulnerabilities?severity=CRITICAL").data.decode()
+        assert "CVE-2026-109618" in html       # CRITICAL
+        assert "CVE-2026-109619" not in html   # HIGH -> below the minimum
+
+    def test_filter_by_min_cvss(self, client):
+        host = make_host("hc")
+        img = make_image_with_container(host, "ci", "ci@sha256:9", "c-ci")
+        vuln_service.set_trivy_result(img, trivy_blob(
+            vuln("CVE-HIGHSCORE", severity="HIGH", v3=9.5, pkg="p1"),
+            vuln("CVE-LOWSCORE", severity="LOW", v3=3.1, pkg="p2")))
+        html = client.get("/vulnerabilities?min_cvss=5").data.decode()
+        assert "CVE-HIGHSCORE" in html
+        assert "CVE-LOWSCORE" not in html
+
+    def test_table_partial_is_filtered(self, client):
+        self._seed_two()
+        r = client.get("/vulnerabilities/table?cve=109618")
+        assert r.status_code == 200
+        html = r.data.decode()
+        assert "CVE-2026-109618" in html and "CVE-2026-109619" not in html
+        assert "<html" not in html   # partial, not a full page
 
     def test_detail_lists_all_affected_containers(self, client):
         self._seed_two()

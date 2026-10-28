@@ -44,6 +44,27 @@ def test_scan_button_triggers_htmx_post(page, live_server):
     assert page.locator("#imagesTable").count() == 1
 
 
+def test_vulnerability_filter_by_cve(page, live_server):
+    # Typing a CVE live-filters the table via htmx (keyup -> GET /vulnerabilities/table).
+    page.goto(f"{live_server}/vulnerabilities", wait_until="load")
+    assert page.locator('#vulnTable tr', has_text="CVE-2026-111111").count() == 1
+    assert page.locator('#vulnTable tr', has_text="CVE-2026-222222").count() == 1
+    with page.expect_response(lambda r: "/vulnerabilities/table" in r.url and r.request.method == "GET"):
+        page.locator("#cve").press_sequentially("111111")
+    page.wait_for_timeout(300)
+    assert page.locator('#vulnTable tr', has_text="CVE-2026-111111").count() == 1
+    assert page.locator('#vulnTable tr', has_text="CVE-2026-222222").count() == 0
+
+
+def test_vulnerability_filter_by_min_severity(page, live_server):
+    page.goto(f"{live_server}/vulnerabilities", wait_until="load")
+    with page.expect_response(lambda r: "/vulnerabilities/table" in r.url):
+        page.locator("#severity").select_option("CRITICAL")
+    page.wait_for_timeout(300)
+    assert page.locator('#vulnTable tr', has_text="CVE-2026-111111").count() == 1   # CRITICAL stays
+    assert page.locator('#vulnTable tr', has_text="CVE-2026-222222").count() == 0   # LOW filtered out
+
+
 def test_table_partial_swap(page, live_server):
     # Same mechanism the 60s poll uses: hx-get /hosts/table, outerHTML swap.
     page.goto(f"{live_server}/hosts", wait_until="load")
