@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from flask import render_template, Blueprint, request, flash, redirect, url_for
+from flask import render_template, Blueprint, request, flash, redirect, url_for, make_response
 from util import generate_random_string, cycle_is_eol, humanize_age, is_stale
 from config import Config
 from sqlalchemy import or_, func
@@ -619,9 +619,15 @@ def get_vulnerabilities():
 def get_vulnerabilities_table():
     """HTMX partial: the filtered vulnerability table."""
     cve, severity, min_cvss, only_fixable, hide_kernel, rce_only, exposed_only = _parse_vuln_filters(request.args)
-    return render_template('vulnerabilities/_table.html',
-                           data=_vulnerabilities_overview(cve, severity, min_cvss, only_fixable,
-                                                          hide_kernel, rce_only, exposed_only))
+    resp = make_response(render_template(
+        'vulnerabilities/_table.html',
+        data=_vulnerabilities_overview(cve, severity, min_cvss, only_fixable,
+                                       hide_kernel, rce_only, exposed_only)))
+    # Mirror the active filters into the browser address bar (via the main page URL, not
+    # the partial's) so the filtered view is shareable and survives a reload.
+    qs = request.query_string.decode()
+    resp.headers['HX-Push-Url'] = f'/vulnerabilities?{qs}' if qs else '/vulnerabilities'
+    return resp
 
 
 @frontend.route('/vulnerabilities/<cve_id>', methods=['GET'])

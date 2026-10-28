@@ -337,6 +337,16 @@ class TestRoutes:
         assert "CVE-2026-109618" in html and "CVE-2026-109619" not in html
         assert "<html" not in html   # partial, not a full page
 
+    def test_table_pushes_filters_into_url(self, client):
+        # HTMX swaps the table partial but the address bar must reflect the filters
+        # (on the main page path, not the /table path) so the view is shareable.
+        r = client.get("/vulnerabilities/table?severity=CRITICAL&rce=1")
+        assert r.headers["HX-Push-Url"] == "/vulnerabilities?severity=CRITICAL&rce=1"
+
+    def test_table_without_filters_pushes_bare_url(self, client):
+        r = client.get("/vulnerabilities/table")
+        assert r.headers["HX-Push-Url"] == "/vulnerabilities"
+
     def test_detail_lists_all_affected_containers(self, client):
         self._seed_two()
         html = client.get("/vulnerabilities/CVE-2026-109618").data.decode()
