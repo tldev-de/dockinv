@@ -98,6 +98,31 @@ class TestIsImageEol:
         assert frontend.is_image_eol(img(xeol=None)) is None
         assert frontend.is_image_eol(None) is None
 
+    # --- EOL now also pulled from Trivy's native OS EOSL flag -----------------
+
+    @staticmethod
+    def _trivy_os(eosl, name="debian 10.13"):
+        return {"Metadata": {"OS": {"Family": "debian", "Name": name, "EOSL": eosl}}}
+
+    def test_true_when_trivy_os_eosl_even_without_xeol(self):
+        assert frontend.is_image_eol(img(trivy=self._trivy_os(True))) is True
+
+    def test_false_when_trivy_os_supported_and_no_xeol(self):
+        assert frontend.is_image_eol(img(trivy=self._trivy_os(False))) is False
+
+    def test_true_when_either_source_flags_eol(self):
+        # Trivy says OS supported, but Xeol flags an EOL component -> still EOL
+        assert frontend.is_image_eol(
+            img(trivy=self._trivy_os(False), xeol=xeol_with("2000-01-01"))) is True
+        # ...and the reverse: Trivy flags the OS, Xeol sees nothing
+        assert frontend.is_image_eol(
+            img(trivy=self._trivy_os(True), xeol=xeol_with("2999-12-31"))) is True
+
+    def test_none_when_trivy_has_no_eosl_key_and_no_xeol(self):
+        # older Trivy / OS not detected: no signal, not a "supported" claim
+        assert frontend.is_image_eol(img(trivy={"Metadata": {"OS": {"Family": "x"}}})) is None
+        assert frontend.is_image_eol(img(trivy={"Results": []})) is None
+
 
 class TestHostAggregation:
     def test_count_eol_images_dedups_per_image_id(self):

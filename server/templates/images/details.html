@@ -22,7 +22,16 @@
         {% else %}
             <span class="opacity-40">not scanned</span>
         {% endif %}
+        <span class="opacity-60 text-sm ml-1">(Xeol components + Trivy OS)</span>
     </div>
+    {% if image_data.os_eol is not none %}
+    <div>
+        <span class="font-bold">OS (Trivy) : </span>
+        {{ image_data.os_name or 'unknown' }} —
+        {% if image_data.os_eol %}<span class="text-error">end-of-life</span>
+        {% else %}<span class="text-success">supported</span>{% endif %}
+    </div>
+    {% endif %}
     <div>
         <span class="font-bold">Last scanned : </span>
         {{ image_data.scanned }}

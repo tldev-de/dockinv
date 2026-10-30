@@ -36,11 +36,35 @@ def count_eol_images(host):
             eol_images_set.add(container.image.id)  # Use image.id as the unique identifier
     return len(eol_images_set)
 
-def is_image_eol(image):
-    if not image or not image.status_xeol:
+def _xeol_eol(image):
+    """Tri-state EOL from Xeol's component matches: None if unscanned, else bool."""
+    if not image.status_xeol:
         return None
     matches = image.status_xeol.get("matches", [])
     return any(cycle_is_eol(match.get("Cycle", {})) for match in matches)
+
+
+def _trivy_os_eol(image):
+    """Tri-state EOL from Trivy's native OS end-of-service-life flag
+    (``Metadata.OS.EOSL``): None if absent/unscanned, else bool."""
+    if not image.status_trivy:
+        return None
+    os_info = (image.status_trivy.get("Metadata") or {}).get("OS") or {}
+    if "EOSL" not in os_info:
+        return None  # older Trivy or OS not detected — no signal
+    return bool(os_info.get("EOSL"))
+
+
+def is_image_eol(image):
+    """EOL if *either* scanner flags it. Xeol gives (now-stale) component-level cycles;
+    Trivy gives actively-maintained OS-level EOSL. Pull from both so neither gap hides an
+    EOL image. None only when neither scanner has an EOL signal yet."""
+    if not image:
+        return None
+    xeol, trivy = _xeol_eol(image), _trivy_os_eol(image)
+    if xeol is None and trivy is None:
+        return None
+    return bool(xeol) or bool(trivy)
 
 
 
@@ -446,6 +470,8 @@ def get_image_details(image_id):
         'xeol_scanned': image.status_xeol is not None,
         'trivy_error': image.scan_error_trivy,
         'xeol_error': image.scan_error_xeol,
+        'os_eol': _trivy_os_eol(image),
+        'os_name': ((image.status_trivy or {}).get('Metadata') or {}).get('OS', {}).get('Name'),
     }
     trivy_findings = transform_trivy_findings_for_display(image)
     xeol_findings = transform_xeol_findings_for_display(image)
