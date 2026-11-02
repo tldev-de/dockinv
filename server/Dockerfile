@@ -8,7 +8,7 @@ RUN npm ci --ignore-scripts && \
     ./node_modules/.bin/tailwindcss -i ./static/css/input.css -o ./static/css/theme.css --minify
 
 # Stage 2: Runtime image
-FROM python:3.13-alpine
+FROM python:3.15-alpine
 
 # install curl for healthcheck
 RUN apk add --no-cache curl
