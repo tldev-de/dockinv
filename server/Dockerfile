@@ -1,5 +1,5 @@
 # Stage 1: Compile Tailwind CSS + DaisyUI
-FROM node:24.18.0-alpine AS css-builder
+FROM node:26.13.0-alpine AS css-builder
 WORKDIR /build
 COPY package.json package-lock.json ./
 COPY static/css/input.css ./static/css/input.css
